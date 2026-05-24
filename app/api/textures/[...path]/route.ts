@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const textureBase = path.resolve(
-    path.join(process.env.DATA_DIR ?? process.cwd(), 'textures')
+    path.join(process.cwd(), 'textures')
   );
 
   const { path: segments } = await params;

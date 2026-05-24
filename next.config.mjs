@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ['mysql2', '@napi-rs/canvas'],
+  outputFileTracingExcludes: {
+    '/api/textures/[...path]': ['./textures/**'],
+  },
   async headers() {
     return [
       {

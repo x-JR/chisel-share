@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 
 interface Props {
@@ -10,6 +10,18 @@ interface Props {
 
 export default function SchematicViewer({ xmlContent, className = '' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [solidColors, setSolidColors] = useState(false);
+
+  // Ref so the async init can read the latest toggle state after it finishes,
+  // and so the toggle handler can call the swap immediately if init is done.
+  const solidColorsRef = useRef(false);
+  const applyModeRef = useRef<((solid: boolean) => void) | null>(null);
+
+  function handleToggle(checked: boolean) {
+    solidColorsRef.current = checked;
+    setSolidColors(checked);
+    applyModeRef.current?.(checked);
+  }
 
   useEffect(() => {
     if (!containerRef.current || !xmlContent) return;
@@ -72,12 +84,6 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
       sun.position.set(1, 2, 1.5);
       scene.add(sun);
 
-      // OrbitControls
-      const controls = new OrbitControls(camera, renderer.domElement);
-      controls.target.set(cx, cy, cz);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.08;
-
       // Texture loader + cache
       const loader = new THREE.TextureLoader();
       const texCache = new Map<number, THREE.Texture | null>();
@@ -107,15 +113,14 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         });
       }
 
-      // Material cache (share material objects between cuboids with the same matIdx)
-      const matCache = new Map<number, THREE.MeshLambertMaterial>();
+      // Separate material caches for each mode so swapping back is instant
+      const texMatCache = new Map<number, THREE.MeshLambertMaterial>();
+      const solidMatCache = new Map<number, THREE.MeshLambertMaterial>();
 
-      async function getMaterial(matIdx: number): Promise<THREE.MeshLambertMaterial> {
-        if (matCache.has(matIdx)) return matCache.get(matIdx)!;
-
+      async function getTexMaterial(matIdx: number): Promise<THREE.MeshLambertMaterial> {
+        if (texMatCache.has(matIdx)) return texMatCache.get(matIdx)!;
         const tex = await getTexture(matIdx);
         let mat: THREE.MeshLambertMaterial;
-
         if (tex) {
           mat = new THREE.MeshLambertMaterial({ map: tex });
         } else {
@@ -127,18 +132,32 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
             emissiveIntensity: isGlow ? 0.5 : 0,
           });
         }
-
-        matCache.set(matIdx, mat);
+        texMatCache.set(matIdx, mat);
         return mat;
       }
 
-      // Build mesh for each cuboid
+      function getSolidMaterial(matIdx: number): THREE.MeshLambertMaterial {
+        if (solidMatCache.has(matIdx)) return solidMatCache.get(matIdx)!;
+        const blockcode = schematic.blockcodes[matIdx] ?? '';
+        const isGlow = blockcode.includes('creativeglow');
+        const mat = new THREE.MeshLambertMaterial({
+          color: isGlow ? 0xffe066 : new THREE.Color().setHSL((matIdx * 0.382) % 1, 0.72, 0.58),
+          emissive: isGlow ? new THREE.Color(0xffaa00) : new THREE.Color(0),
+          emissiveIntensity: isGlow ? 0.5 : 0,
+        });
+        solidMatCache.set(matIdx, mat);
+        return mat;
+      }
+
+      // Build meshes and track matIdx per mesh for mode swapping
+      const meshEntries: Array<{ mesh: THREE.Mesh; matIdx: number }> = [];
+
       for (const c of schematic.cuboids) {
         const cw = (c.x2 - c.x1 + 1) * V;
         const ch = (c.y2 - c.y1 + 1) * V;
         const cd = (c.z2 - c.z1 + 1) * V;
         const geo = new THREE.BoxGeometry(cw, ch, cd);
-        const mat = await getMaterial(c.matIdx);
+        const mat = await getTexMaterial(c.matIdx);
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(
           ((c.x1 + c.x2) / 2) * V,
@@ -146,12 +165,29 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
           ((c.z1 + c.z2) / 2) * V
         );
         scene.add(mesh);
+        meshEntries.push({ mesh, matIdx: c.matIdx });
       }
 
       // Grid helper at the base of the voxel space
       const grid = new THREE.GridHelper(1, 16, 0x555566, 0x333344);
       grid.position.set(0.5 - V * 0.5, 0, 0.5 - V * 0.5);
       scene.add(grid);
+
+      // Material swap — called by the toggle handler
+      applyModeRef.current = (solid: boolean) => {
+        for (const { mesh, matIdx } of meshEntries) {
+          mesh.material = solid ? getSolidMaterial(matIdx) : (texMatCache.get(matIdx) ?? getSolidMaterial(matIdx));
+        }
+      };
+
+      // Apply whichever mode the user may have toggled while init was loading
+      if (solidColorsRef.current) applyModeRef.current(true);
+
+      // OrbitControls
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(cx, cy, cz);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
 
       // Animation loop
       function animate() {
@@ -177,6 +213,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         cancelAnimationFrame(animationId);
         resizeObs.disconnect();
         controls.dispose();
+        applyModeRef.current = null;
         scene.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
             obj.geometry.dispose();
@@ -204,9 +241,17 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
   }, [xmlContent]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`w-full h-full bg-slate-900 rounded-lg overflow-hidden ${className}`}
-    />
+    <div className={`relative w-full h-full ${className}`}>
+      <div ref={containerRef} className="w-full h-full bg-slate-900 rounded-lg overflow-hidden" />
+      <label className="absolute bottom-3 right-3 flex items-center gap-2 bg-slate-900/80 hover:bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-1.5 cursor-pointer select-none backdrop-blur-sm transition-colors">
+        <input
+          type="checkbox"
+          checked={solidColors}
+          onChange={(e) => handleToggle(e.target.checked)}
+          className="w-3.5 h-3.5 accent-amber-500 cursor-pointer"
+        />
+        <span className="text-slate-300 text-xs font-medium">Solid colours</span>
+      </label>
+    </div>
   );
 }

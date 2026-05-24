@@ -51,7 +51,7 @@ export default function HowToPage() {
             {
               step: '3',
               title: 'Left-click the block with the Pantograph',
-              body: 'Hold the QP Chisel Pantograph in your hand, look at the chiselled block, and left-click it.',
+              body: 'Hold the Pantograph in your hand, look at the chiselled block, and left-click it.',
             },
             {
               step: '4',
@@ -168,19 +168,8 @@ export default function HowToPage() {
             },
             {
               step: '4',
-              title: 'Right-click with the Pantograph',
-              body: 'Hold the QP Chisel Pantograph and left-click on the empty chiselled block, then press P to open the shape menu.',
-            },
-            {
-              step: '5',
-              title: 'Select "Import" and choose your file',
-              body: (
-                <>
-                  Choose <strong className="text-slate-200">Import</strong> from the menu. Your saved schematic files
-                  will be listed — select the one you placed in the folder. The chisel block will be filled with the
-                  imported design.
-                </>
-              ),
+              title: 'Open the Portfolio menu while looking at the block',
+              body: 'Hold the Pantograph in your hand and press \'P\' on the empty chiselled block, then select the imported block from the shape menu.',
             },
           ].map(({ step, title, body }) => (
             <li key={step} className="flex gap-4">

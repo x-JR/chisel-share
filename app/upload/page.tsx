@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import UploadForm from '@/components/UploadForm';
 
 export default function UploadPage() {
@@ -10,6 +11,15 @@ export default function UploadPage() {
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
         <UploadForm />
+      </div>
+
+      <div className="mt-4 text-center">
+        <p className="text-slate-500 text-sm">
+          Uploading multiple related pieces?{' '}
+          <Link href="/upload/collection" className="text-amber-500 hover:text-amber-400 transition-colors">
+            Upload as a collection →
+          </Link>
+        </p>
       </div>
 
       <div className="mt-6 bg-slate-900 border border-slate-800 rounded-xl p-6">

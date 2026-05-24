@@ -1,14 +1,13 @@
 import Link from 'next/link';
-import { blockcodeToColor } from '@/lib/texture-resolver';
 import ThumbnailImage from '@/components/ThumbnailImage';
 
 interface Props {
   id: string;
   name: string;
   displayName: string | null;
-  blockcodes: string[];
-  cuboidCount: number;
   uploadedAt: number;
+  downloadCount?: number;
+  likeCount?: number;
 }
 
 function formatDate(ts: number): string {
@@ -23,9 +22,9 @@ export default function SchematicCard({
   id,
   name,
   displayName,
-  blockcodes,
-  cuboidCount,
   uploadedAt,
+  downloadCount = 0,
+  likeCount = 0,
 }: Props) {
   return (
     <Link href={`/view/${id}`} className="block group h-full">
@@ -46,33 +45,12 @@ export default function SchematicCard({
           )}
         </div>
 
-        {/* Material swatches */}
-        <div className="flex flex-wrap gap-1.5">
-          {blockcodes.slice(0, 8).map((code, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-1.5 bg-slate-700/70 rounded px-2 py-1"
-              title={code}
-            >
-              <span
-                className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                style={{ backgroundColor: blockcodeToColor(code) }}
-              />
-              <span className="text-slate-400 text-xs truncate max-w-[120px]">
-                {code.replace(/^game:/, '')}
-              </span>
-            </div>
-          ))}
-          {blockcodes.length > 8 && (
-            <span className="text-slate-500 text-xs self-center">
-              +{blockcodes.length - 8} more
-            </span>
-          )}
-        </div>
-
         {/* Footer */}
         <div className="mt-auto flex items-center justify-between text-slate-500 text-xs">
-          <span>{cuboidCount} cuboid{cuboidCount !== 1 ? 's' : ''}</span>
+          <div className="flex items-center gap-3">
+            <span title="Likes">♥ {likeCount}</span>
+            <span title="Downloads">⬇ {downloadCount}</span>
+          </div>
           <span>{formatDate(uploadedAt)}</span>
         </div>
         </div>

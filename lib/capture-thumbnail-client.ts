@@ -124,6 +124,7 @@ export async function captureThumbnail(xmlContent: string): Promise<Blob | null>
     );
 
     renderer.dispose();
+    renderer.forceContextLoss();
     texCache.forEach((t) => t?.dispose());
     matCache.forEach((m) => m.dispose());
 

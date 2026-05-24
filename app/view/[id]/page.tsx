@@ -7,6 +7,7 @@ import { getSchematic } from '@/lib/db';
 import { blockcodeToColor } from '@/lib/texture-resolver';
 import DeleteButton from '@/components/DeleteButton';
 import SchematicViewer from '@/components/SchematicViewerClient';
+import LikeButton from '@/components/LikeButton';
 
 function schematicsDir(): string {
   const dataDir = process.env.DATA_DIR ?? process.cwd();
@@ -87,6 +88,14 @@ export default async function ViewPage({ params }: PageProps) {
                 <span className="text-slate-200">{record.cuboid_count}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-slate-500">Downloads</span>
+                <span className="text-slate-200">{record.download_count}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Likes</span>
+                <span className="text-slate-200">{record.like_count ?? 0}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-slate-500">Uploaded</span>
                 <span className="text-slate-200">
                   {new Date(record.uploaded_at * 1000).toLocaleDateString('en-US', {
@@ -130,6 +139,7 @@ export default async function ViewPage({ params }: PageProps) {
             >
               ⬇ Download Schematic
             </a>
+            <LikeButton apiPath={`/api/schematics/${record.id}/like`} initialCount={record.like_count ?? 0} />
             {canDelete && <DeleteButton id={record.id} />}
           </div>
         </div>

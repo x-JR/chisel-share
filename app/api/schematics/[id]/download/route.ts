@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSchematic } from '@/lib/db';
+import { getSchematic, incrementDownloadCount } from '@/lib/db';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -24,6 +24,9 @@ export async function GET(
   } catch {
     return new NextResponse('File not found', { status: 404 });
   }
+
+  // Fire-and-forget download count increment
+  incrementDownloadCount(id).catch(() => {});
 
   // Sanitise the filename for the Content-Disposition header
   const title = (record.display_name || record.name).replace(/[^a-zA-Z0-9 _-]/g, '_');
