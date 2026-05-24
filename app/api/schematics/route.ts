@@ -114,6 +114,9 @@ export async function POST(request: NextRequest) {
     cuboid_count: meta.cuboidCount,
     uploaded_at: Math.floor(Date.now() / 1000),
     uploader_token: uploaderToken,
+    download_count: 0,
+    collection_id: null,
+    collection_order: 0,
   };
 
   await insertSchematic(record);
