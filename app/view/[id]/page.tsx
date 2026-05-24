@@ -8,6 +8,7 @@ import { blockcodeToColor } from '@/lib/texture-resolver';
 import DeleteButton from '@/components/DeleteButton';
 import SchematicViewer from '@/components/SchematicViewerClient';
 import LikeButton from '@/components/LikeButton';
+import DownloadButton from '@/components/DownloadButton';
 
 function schematicsDir(): string {
   const dataDir = process.env.DATA_DIR ?? process.cwd();
@@ -133,12 +134,11 @@ export default async function ViewPage({ params }: PageProps) {
 
           {/* Actions */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-2.5">
-            <a
+            <DownloadButton
               href={`/api/schematics/${record.id}/download`}
-              className="block w-full text-center bg-amber-600 hover:bg-amber-500 text-white font-medium py-2.5 rounded-lg transition-colors"
-            >
-              ⬇ Download Schematic
-            </a>
+              filename={`${(record.display_name || record.name).replace(/[^a-zA-Z0-9 _-]/g, '_')}.xml`}
+              label="⬇ Download Schematic"
+            />
             <LikeButton apiPath={`/api/schematics/${record.id}/like`} initialCount={record.like_count ?? 0} />
             {canDelete && <DeleteButton id={record.id} />}
           </div>

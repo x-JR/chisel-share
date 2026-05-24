@@ -77,6 +77,24 @@ function getPool(): mysql.Pool {
           PRIMARY KEY (collection_id, voter_token)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS logs (
+          id            INT          NOT NULL AUTO_INCREMENT,
+          timestamp     INT          NOT NULL,
+          ip            VARCHAR(45)  NOT NULL,
+          user_agent    TEXT         DEFAULT NULL,
+          action        VARCHAR(64)  NOT NULL,
+          resource_type VARCHAR(32)  DEFAULT NULL,
+          resource_id   VARCHAR(36)  DEFAULT NULL,
+          voter_token   VARCHAR(36)  DEFAULT NULL,
+          status        VARCHAR(32)  NOT NULL DEFAULT 'success',
+          details       TEXT         DEFAULT NULL,
+          PRIMARY KEY (id),
+          INDEX idx_logs_timestamp (timestamp),
+          INDEX idx_logs_ip (ip),
+          INDEX idx_logs_action (action)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
     })(_pool);
   }
   return _pool;
@@ -405,4 +423,38 @@ export async function toggleCollectionLike(collectionId: string, voterToken: str
     );
     return true;
   }
+}
+
+// ─── Logs ─────────────────────────────────────────────────────────────────────
+
+export interface LogEntry {
+  timestamp: number;
+  ip: string;
+  user_agent: string | null;
+  action: string;
+  resource_type: string | null;
+  resource_id: string | null;
+  voter_token: string | null;
+  status: string;
+  details: string | null;
+}
+
+export async function insertLog(entry: LogEntry): Promise<void> {
+  const pool = await db();
+  await pool.execute(
+    `INSERT INTO logs
+       (timestamp, ip, user_agent, action, resource_type, resource_id, voter_token, status, details)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      entry.timestamp,
+      entry.ip,
+      entry.user_agent,
+      entry.action,
+      entry.resource_type,
+      entry.resource_id,
+      entry.voter_token,
+      entry.status,
+      entry.details,
+    ]
+  );
 }

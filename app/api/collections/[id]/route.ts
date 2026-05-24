@@ -6,6 +6,7 @@ import {
   deleteCollection,
   deleteSchematic,
 } from '@/lib/db';
+import { logAction } from '@/lib/logger';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -41,7 +42,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -68,5 +69,13 @@ export async function DELETE(
   }
 
   await deleteCollection(id);
+  logAction({
+    request,
+    action: 'delete',
+    resourceType: 'collection',
+    resourceId: id,
+    voterToken: uploaderToken,
+    details: { memberCount: schematics.length },
+  });
   return new NextResponse(null, { status: 204 });
 }

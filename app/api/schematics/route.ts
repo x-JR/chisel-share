@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { listSchematics, insertSchematic, countSchematics } from '@/lib/db';
 import { parseSchematicMeta } from '@/lib/schematic-parser';
 import { generateThumbnail } from '@/lib/thumbnail';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { logAction, getClientIp } from '@/lib/logger';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs/promises';
@@ -41,7 +43,30 @@ export async function GET(request: NextRequest) {
   });
 }
 
+// 5 uploads per 10 minutes per IP
+const UPLOAD_LIMIT = 5;
+const UPLOAD_WINDOW_MS = 10 * 60_000;
+
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, 'upload', UPLOAD_LIMIT, UPLOAD_WINDOW_MS);
+  if (!rl.allowed) {
+    logAction({
+      request,
+      action: 'upload',
+      resourceType: 'schematic',
+      status: 'rate_limited',
+      details: { retryAfterMs: rl.retryAfterMs },
+    });
+    return NextResponse.json(
+      { error: 'Too many uploads. Please wait before uploading again.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+      }
+    );
+  }
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -149,6 +174,15 @@ export async function POST(request: NextRequest) {
   } catch {
     // Thumbnail failure does not affect the upload
   }
+
+  logAction({
+    request,
+    action: 'upload',
+    resourceType: 'schematic',
+    resourceId: id,
+    voterToken: uploaderToken,
+    details: { name: displayName, cuboidCount: meta.cuboidCount },
+  });
 
   const response = NextResponse.json(
     { ...record, blockcodes: meta.blockcodes },

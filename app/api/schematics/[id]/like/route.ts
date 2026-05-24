@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import { getSchematic, getLikeCount, hasLiked, toggleLike } from '@/lib/db';
+import { logAction } from '@/lib/logger';
 
 export async function GET(
   _request: NextRequest,
@@ -23,7 +24,7 @@ export async function GET(
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -43,6 +44,14 @@ export async function POST(
 
   const liked = await toggleLike(id, voterToken);
   const count = await getLikeCount(id);
+
+  logAction({
+    request,
+    action: liked ? 'like' : 'unlike',
+    resourceType: 'schematic',
+    resourceId: id,
+    voterToken,
+  });
 
   const response = NextResponse.json({ liked, count });
 
