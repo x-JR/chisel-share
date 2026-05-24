@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
 
-const TEXTURE_BASE = path.resolve(
-  path.join(process.env.DATA_DIR ?? process.cwd(), 'textures')
-);
-
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const textureBase = path.resolve(
+    path.join(process.env.DATA_DIR ?? process.cwd(), 'textures')
+  );
+
   const { path: segments } = await params;
   if (!segments || segments.length === 0) {
     return new NextResponse('Not found', { status: 404 });
@@ -28,9 +28,9 @@ export async function GET(
   }
 
   // Build and validate the absolute path to prevent directory traversal
-  const absolutePath = path.join(TEXTURE_BASE, ...segments);
+  const absolutePath = path.join(textureBase, ...segments);
   const normalised = path.resolve(absolutePath);
-  if (!normalised.startsWith(TEXTURE_BASE + path.sep) && normalised !== TEXTURE_BASE) {
+  if (!normalised.startsWith(textureBase + path.sep) && normalised !== textureBase) {
     return new NextResponse('Not found', { status: 404 });
   }
 
