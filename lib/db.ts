@@ -330,6 +330,39 @@ export async function countCollections(): Promise<number> {
   return (rows[0] as { count: number }).count;
 }
 
+export async function searchCollections(
+  query: string,
+  limit = 12,
+  offset = 0,
+  sort: 'newest' | 'most_liked' = 'newest'
+): Promise<CollectionRecord[]> {
+  const pool = await db();
+  const like = `%${query}%`;
+  const orderBy = sort === 'most_liked'
+    ? 'like_count DESC, c.created_at DESC'
+    : 'c.created_at DESC';
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT c.*,
+       (SELECT COUNT(*) FROM collection_likes WHERE collection_id = c.id) AS like_count
+     FROM collections c
+     WHERE c.name LIKE ? OR c.description LIKE ?
+     ORDER BY ${orderBy}
+     LIMIT ? OFFSET ?`,
+    [like, like, limit, offset]
+  );
+  return rows as CollectionRecord[];
+}
+
+export async function countCollectionSearchResults(query: string): Promise<number> {
+  const pool = await db();
+  const like = `%${query}%`;
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT COUNT(*) AS count FROM collections WHERE name LIKE ? OR description LIKE ?',
+    [like, like]
+  );
+  return (rows[0] as { count: number }).count;
+}
+
 export async function deleteCollection(id: string): Promise<void> {
   const pool = await db();
   await pool.execute('DELETE FROM collections WHERE id = ?', [id]);

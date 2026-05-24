@@ -7,6 +7,8 @@ import {
   countSearchResults,
   listCollections,
   countCollections,
+  searchCollections,
+  countCollectionSearchResults,
   getCollectionSchematics,
 } from '@/lib/db';
 import SchematicCard from '@/components/SchematicCard';
@@ -51,9 +53,9 @@ export default async function GalleryPage({ searchParams }: PageProps) {
 
   const totalPages = Math.ceil(total / limit);
 
-  // Collections section — only shown when not searching
+  // Collections section — searched when a query is active
   const [collections, collectionCount] = searchQuery
-    ? [[], 0]
+    ? await Promise.all([searchCollections(searchQuery, 12, 0, sort), countCollectionSearchResults(searchQuery)])
     : await Promise.all([listCollections(12, 0, sort), countCollections()]);
 
   // For each collection, look up the first schematic id for its thumbnail + member count
@@ -93,14 +95,14 @@ export default async function GalleryPage({ searchParams }: PageProps) {
       {/* Search context */}
       {searchQuery && (
         <p className="mb-4 text-slate-400 text-sm">
-          {total === 0
+          {total === 0 && collectionCount === 0
             ? `No results for "${searchQuery}"`
-            : `${total} result${total !== 1 ? 's' : ''} for "${searchQuery}"`}
+            : `${total + collectionCount} result${total + collectionCount !== 1 ? 's' : ''} for "${searchQuery}"`}
         </p>
       )}
 
-      {/* Collections section — hidden during search */}
-      {!searchQuery && collectionCount > 0 && (
+      {/* Collections section */}
+      {collectionCount > 0 && (
         <section className="mb-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-slate-200">Collections</h2>
@@ -129,11 +131,11 @@ export default async function GalleryPage({ searchParams }: PageProps) {
       )}
 
       {/* Empty state */}
-      {records.length === 0 ? (
+      {records.length === 0 && collectionCount === 0 ? (
         <div className="text-center py-28">
           {searchQuery ? (
             <>
-              <h2 className="text-xl text-slate-400 mb-4">No schematics found</h2>
+              <h2 className="text-xl text-slate-400 mb-4">No results found</h2>
               <Link
                 href="/"
                 className="text-amber-500 hover:text-amber-400 text-sm transition-colors"
