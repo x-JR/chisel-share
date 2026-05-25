@@ -11,6 +11,48 @@ function tex(path: string): string {
 }
 
 export function resolveTexture(blockcode: string): string | null {
+  // game:rock-cracked-{rock}  (must be checked before generic rock rule)
+  {
+    const m = blockcode.match(/^game:rock-cracked-(.+)$/);
+    if (m) return tex(`stone/rock-cracked/${m[1]}1.png`);
+  }
+
+  // game:rock-{rock}
+  {
+    const m = blockcode.match(/^game:rock-(.+)$/);
+    if (m) return tex(`stone/rock/${m[1]}1.png`);
+  }
+
+  // game:cobblestone-{rock}
+  {
+    const m = blockcode.match(/^game:cobblestone-(.+)$/);
+    if (m) return tex(`stone/cobblestone/${m[1]}1.png`);
+  }
+
+  // game:crackedcobblestone-{rock}
+  {
+    const m = blockcode.match(/^game:crackedcobblestone-(.+)$/);
+    if (m) return tex(`stone/cobblestone-cracked/${m[1]}1.png`);
+  }
+
+  // game:cobblestoneslab-{rock}-*
+  {
+    const m = blockcode.match(/^game:cobblestoneslab-([^-]+)/);
+    if (m) return tex(`stone/cobblestoneslab/${m[1]}.png`);
+  }
+
+  // game:cobblestonestairs-{rock}-*
+  {
+    const m = blockcode.match(/^game:cobblestonestairs-([^-]+)/);
+    if (m) return tex(`stone/cobblestonestairs/${m[1]}.png`);
+  }
+
+  // game:rockpolishedslab-{rock}-*
+  {
+    const m = blockcode.match(/^game:rockpolishedslab-([^-]+)/);
+    if (m) return tex(`stone/polishedrockslab/${m[1]}.png`);
+  }
+
   // game:drystone-{rock}
   {
     const m = blockcode.match(/^game:drystone-(.+)$/);

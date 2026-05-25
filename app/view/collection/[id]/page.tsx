@@ -74,6 +74,7 @@ export default async function CollectionViewPage({ params }: PageProps) {
         }))}
         likeCount={likeCount}
         canEdit={canEdit}
+        isAdmin={isAdmin}
       />
     </main>
   );

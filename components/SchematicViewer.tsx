@@ -44,6 +44,12 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
       const schematic = parseSchematicXml(xmlContent);
       if (!schematic.cuboids.length) return;
 
+      console.group('[SchematicViewer] Parsed schematic');
+      console.log('Name:', schematic.name);
+      console.log('Block codes:', schematic.blockcodes);
+      console.log('Cuboid count:', schematic.cuboids.length);
+      console.groupEnd();
+
       // Renderer
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       const w = container.clientWidth || 600;
@@ -90,7 +96,9 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
 
       async function getTexture(matIdx: number): Promise<THREE.Texture | null> {
         if (texCache.has(matIdx)) return texCache.get(matIdx) ?? null;
-        const url = resolveTexture(schematic.blockcodes[matIdx] ?? '');
+        const blockcode = schematic.blockcodes[matIdx] ?? '';
+        const url = resolveTexture(blockcode);
+        console.log(`[SchematicViewer] matIdx=${matIdx} blockcode="${blockcode}" → resolvedUrl=${url ?? 'null (no match)'}`);
         if (!url) {
           texCache.set(matIdx, null);
           return null;
@@ -99,6 +107,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
           loader.load(
             url,
             (tex) => {
+              console.log(`[SchematicViewer] matIdx=${matIdx} texture loaded OK: ${url}`);
               tex.magFilter = THREE.NearestFilter;
               tex.minFilter = THREE.NearestFilter;
               texCache.set(matIdx, tex);
@@ -106,6 +115,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
             },
             undefined,
             () => {
+              console.warn(`[SchematicViewer] matIdx=${matIdx} texture FAILED to load: ${url}`);
               texCache.set(matIdx, null);
               resolve(null);
             }

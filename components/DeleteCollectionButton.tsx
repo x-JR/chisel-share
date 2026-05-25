@@ -34,13 +34,15 @@ export default function DeleteCollectionButton({ id }: { id: string }) {
     <button
       onClick={handleDelete}
       disabled={deleting}
-      className={`font-medium px-4 py-2 rounded-lg transition-colors ${
+      className={[
+        'flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border font-medium text-sm transition-colors',
         confirming
-          ? 'bg-red-700 hover:bg-red-600 text-white'
-          : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200'
-      }`}
+          ? 'bg-red-900/30 border-red-700 text-red-400 hover:bg-red-900/50'
+          : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300',
+        deleting ? 'opacity-50 cursor-not-allowed' : '',
+      ].join(' ')}
     >
-      {deleting ? 'Deleting…' : confirming ? 'Confirm delete collection' : '🗑 Delete Collection'}
+      {deleting ? 'Deleting…' : confirming ? 'Confirm Delete' : '🗑 Delete Collection'}
     </button>
   );
 }

@@ -7,6 +7,7 @@ import LikeButton from './LikeButton';
 import DownloadButton from './DownloadButton';
 import DeleteCollectionButton from './DeleteCollectionButton';
 import SchematicCard from './SchematicCard';
+import RegenerateThumbnailButton from './RegenerateThumbnailButton';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ interface Props {
   schematics: SchematicData[];
   likeCount: number;
   canEdit: boolean;
+  isAdmin: boolean;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ export default function EditCollectionClient({
   schematics,
   likeCount,
   canEdit,
+  isAdmin,
 }: Props) {
   const router = useRouter();
 
@@ -252,29 +255,34 @@ export default function EditCollectionClient({
             </p>
           </div>
 
-          <div className="shrink-0 flex flex-col gap-2">
-            {canEdit && (
+          {canEdit ? (
+            <div className="shrink-0 grid grid-cols-2 gap-2 w-96">
               <button
                 onClick={() => setEditing(true)}
-                className="flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-4 py-2 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border font-medium text-sm transition-colors bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300"
               >
                 ✏ Edit Collection
               </button>
-            )}
-            {canEdit && <DeleteCollectionButton id={collection.id} />}
-          </div>
-
-          <div className="shrink-0 flex flex-col gap-2">
-            <DownloadButton
-              href={`/api/collections/${collection.id}/download`}
-              filename={`${collection.name.replace(/[^a-zA-Z0-9 _-]/g, '_')}.zip`}
-              label="⬇ Download All"
-              className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-60 disabled:cursor-not-allowed text-slate-200 text-sm font-medium px-4 py-2 rounded-lg border border-slate-600 transition-colors"
-            />
-            <div className="w-40">
+              <DownloadButton
+                href={`/api/collections/${collection.id}/download`}
+                filename={`${collection.name.replace(/[^a-zA-Z0-9 _-]/g, '_')}.zip`}
+                label="⬇ Download All"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300"
+              />
+              <DeleteCollectionButton id={collection.id} />
               <LikeButton apiPath={`/api/collections/${collection.id}/like`} initialCount={likeCount} />
             </div>
-          </div>
+          ) : (
+            <div className="shrink-0 flex flex-col gap-2 w-48">
+              <DownloadButton
+                href={`/api/collections/${collection.id}/download`}
+                filename={`${collection.name.replace(/[^a-zA-Z0-9 _-]/g, '_')}.zip`}
+                label="⬇ Download All"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300"
+              />
+              <LikeButton apiPath={`/api/collections/${collection.id}/like`} initialCount={likeCount} />
+            </div>
+          )}
         </div>
 
         {/* Parts grid */}
@@ -394,8 +402,9 @@ export default function EditCollectionClient({
             </div>
 
             {/* Thumbnail */}
-            <div className="w-14 h-14 bg-slate-900 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-              {p.kind === 'existing' ? (
+            <div className="flex flex-col gap-1.5 shrink-0">
+              <div className="w-14 h-14 bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
+                {p.kind === 'existing' ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`/api/schematics/${p.id}/thumb`}
@@ -414,6 +423,10 @@ export default function EditCollectionClient({
                 />
               ) : (
                 <span className="text-slate-600 text-2xl">📦</span>
+              )}
+              </div>
+              {isAdmin && p.kind === 'existing' && (
+                <RegenerateThumbnailButton id={p.id} />
               )}
             </div>
 

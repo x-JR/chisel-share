@@ -8,6 +8,7 @@ import { getSchematic } from '@/lib/db';
 import { blockcodeToColor } from '@/lib/texture-resolver';
 import SchematicViewer from '@/components/SchematicViewerClient';
 import EditSchematicClient from '@/components/EditSchematicClient';
+import RegenerateThumbnailButton from '@/components/RegenerateThumbnailButton';
 
 function schematicsDir(): string {
   const dataDir = process.env.DATA_DIR ?? process.cwd();
@@ -102,6 +103,14 @@ export default async function ViewPage({ params }: PageProps) {
             uploadedAt={record.uploaded_at}
             canEdit={canEdit}
           />
+
+          {/* Admin tools */}
+          {isAdmin && (
+            <div className="bg-slate-900 border border-amber-800/40 rounded-xl p-5">
+              <h2 className="text-amber-400 font-semibold text-sm mb-3">Admin</h2>
+              <RegenerateThumbnailButton id={record.id} />
+            </div>
+          )}
 
           {/* Materials */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
