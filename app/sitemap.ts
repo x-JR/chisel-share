@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next';
 import { getAllSchematicIdsForSitemap, getAllCollectionIdsForSitemap } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://chiselshare.com';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
