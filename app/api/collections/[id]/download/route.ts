@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, getCollectionSchematics, incrementDownloadCount } from '@/lib/db';
+import { logAction } from '@/lib/logger';
 import path from 'path';
 import fs from 'fs/promises';
 import JSZip from 'jszip';
@@ -10,17 +11,19 @@ function schematicsDir(): string {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const collection = await getCollection(id);
   if (!collection) {
+    logAction({ request, action: 'download', resourceType: 'collection', resourceId: id, status: 'not_found' });
     return new NextResponse('Not found', { status: 404 });
   }
 
   const schematics = await getCollectionSchematics(id);
   if (schematics.length === 0) {
+    logAction({ request, action: 'download', resourceType: 'collection', resourceId: id, status: 'empty' });
     return new NextResponse('Collection is empty', { status: 404 });
   }
 
@@ -43,6 +46,15 @@ export async function GET(
   const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 
   const collectionTitle = collection.name.replace(/[^a-zA-Z0-9 _-]/g, '_');
+
+  // Fire-and-forget download log
+  logAction({
+    request,
+    action: 'download',
+    resourceType: 'collection',
+    resourceId: id,
+    details: { schematicCount: schematics.length },
+  });
 
   return new NextResponse(new Uint8Array(zipBuffer), {
     headers: {

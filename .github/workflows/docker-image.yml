@@ -36,3 +36,5 @@ jobs:
           push: true # This tells the action to push after building
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=ultimatedl/chisel-share:buildcache
+          cache-to: type=registry,ref=ultimatedl/chisel-share:buildcache,mode=max

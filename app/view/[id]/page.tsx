@@ -3,12 +3,11 @@ import Link from 'next/link';
 import path from 'path';
 import fs from 'fs/promises';
 import { cookies } from 'next/headers';
+import type { Metadata } from 'next';
 import { getSchematic } from '@/lib/db';
 import { blockcodeToColor } from '@/lib/texture-resolver';
-import DeleteButton from '@/components/DeleteButton';
 import SchematicViewer from '@/components/SchematicViewerClient';
-import LikeButton from '@/components/LikeButton';
-import DownloadButton from '@/components/DownloadButton';
+import EditSchematicClient from '@/components/EditSchematicClient';
 
 function schematicsDir(): string {
   const dataDir = process.env.DATA_DIR ?? process.cwd();
@@ -17,6 +16,27 @@ function schematicsDir(): string {
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const record = await getSchematic(id);
+  if (!record) return {};
+
+  const title = record.display_name ?? record.name;
+  const description = record.description
+    ? `${record.description.slice(0, 140)} — Vintage Story QP Chisel schematic`
+    : `${title} — A QP Chisel schematic for Vintage Story. Download and use in your world.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${title} | Chisel Share`,
+      description,
+      type: 'article',
+    },
+  };
 }
 
 export default async function ViewPage({ params }: PageProps) {
@@ -35,13 +55,12 @@ export default async function ViewPage({ params }: PageProps) {
   }
 
   const blockcodes: string[] = JSON.parse(record.blockcodes);
-  const title = record.display_name || record.name;
 
   const cookieStore = await cookies();
   const uploaderToken = cookieStore.get('uploader_token')?.value;
   const adminToken = process.env.ADMIN_TOKEN;
   const isAdmin = !!adminToken && uploaderToken === adminToken;
-  const canDelete =
+  const canEdit =
     isAdmin || (!!record.uploader_token && record.uploader_token === uploaderToken);
 
   return (
@@ -72,42 +91,17 @@ export default async function ViewPage({ params }: PageProps) {
 
         {/* Sidebar */}
         <div className="lg:w-80 flex-shrink-0 flex flex-col gap-4">
-          {/* Title card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <h1 className="text-2xl font-bold text-amber-400 break-words">{title}</h1>
-            {record.display_name && (
-              <p className="text-slate-500 text-sm mt-1 break-words">{record.name}</p>
-            )}
-            {record.description && (
-              <p className="text-slate-300 text-sm mt-3 leading-relaxed">
-                {record.description}
-              </p>
-            )}
-            <div className="mt-4 pt-4 border-t border-slate-800 text-sm space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Cuboids</span>
-                <span className="text-slate-200">{record.cuboid_count}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Downloads</span>
-                <span className="text-slate-200">{record.download_count}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Likes</span>
-                <span className="text-slate-200">{record.like_count ?? 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Uploaded</span>
-                <span className="text-slate-200">
-                  {new Date(record.uploaded_at * 1000).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </span>
-              </div>
-            </div>
-          </div>
+          <EditSchematicClient
+            id={record.id}
+            initialDisplayName={record.display_name ?? record.name}
+            initialDescription={record.description}
+            schematicName={record.name}
+            cuboidCount={record.cuboid_count}
+            downloadCount={record.download_count}
+            likeCount={record.like_count ?? 0}
+            uploadedAt={record.uploaded_at}
+            canEdit={canEdit}
+          />
 
           {/* Materials */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
@@ -130,17 +124,6 @@ export default async function ViewPage({ params }: PageProps) {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Actions */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-2.5">
-            <DownloadButton
-              href={`/api/schematics/${record.id}/download`}
-              filename={`${(record.display_name || record.name).replace(/[^a-zA-Z0-9 _-]/g, '_')}.xml`}
-              label="⬇ Download Schematic"
-            />
-            <LikeButton apiPath={`/api/schematics/${record.id}/like`} initialCount={record.like_count ?? 0} />
-            {canDelete && <DeleteButton id={record.id} />}
           </div>
         </div>
       </div>

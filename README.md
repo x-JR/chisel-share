@@ -40,13 +40,25 @@ Open **http://localhost:3000**.
 
 ## Configuration
 
-Copy `.env.example` to `.env` and adjust as needed:
+Set these in your environment or in a `.env` file (for local dev):
 
 | Variable | Default | Description |
 |---|---|---|
-| `TEXTURE_PATH` | `./textures/block` | Path to VS block textures (relative or absolute) |
-| `DATA_DIR` | `./data` | Where uploaded schematics and the SQLite DB are stored |
+| `NEXT_PUBLIC_SITE_URL` | `https://chiselshare.com` | Public URL of your deployment — used for sitemaps, canonical URLs, and Open Graph tags. **Must be set at Docker build time** (build arg). |
+| `DB_HOST` | — | MySQL host |
+| `DB_PORT` | `3306` | MySQL port |
+| `DB_USER` | — | MySQL user |
+| `DB_PASSWORD` | — | MySQL password |
+| `DB_NAME` | — | MySQL database name |
+| `DATA_DIR` | `./data` | Where uploaded schematics and thumbnails are stored |
+| `ADMIN_TOKEN` | — | Optional token granting edit/delete rights on all content |
 | `PORT` | `3000` | HTTP port |
+
+> **Note:** `NEXT_PUBLIC_SITE_URL` is a Next.js public variable baked into the client bundle at build time. When building with Docker, pass it as a build argument:
+> ```bash
+> docker compose build --build-arg NEXT_PUBLIC_SITE_URL=https://your-domain.com
+> ```
+> Or set `NEXT_PUBLIC_SITE_URL` in your shell / `.env` before running `docker compose up --build`.
 
 ## Project Structure
 
@@ -64,7 +76,7 @@ components/
   UploadForm       Drag-and-drop upload form
   DeleteButton     Client-side delete with confirmation
 lib/
-  db.ts            SQLite via better-sqlite3
+  db.ts            MySQL via mysql2/promise
   schematic-parser Server-side XML → metadata extractor
   voxel-decoder    Browser-side protobuf varint decoder + XML parser
   texture-resolver Blockcode → texture URL mapping

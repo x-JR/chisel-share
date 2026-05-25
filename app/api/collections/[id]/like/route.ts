@@ -7,6 +7,7 @@ import {
   hasLikedCollection,
   toggleCollectionLike,
 } from '@/lib/db';
+import { logAction } from '@/lib/logger';
 
 export async function GET(
   _request: NextRequest,
@@ -28,7 +29,7 @@ export async function GET(
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -48,6 +49,14 @@ export async function POST(
 
   const liked = await toggleCollectionLike(id, voterToken);
   const count = await getCollectionLikeCount(id);
+
+  logAction({
+    request: request,
+    action: liked ? 'like' : 'unlike',
+    resourceType: 'collection',
+    resourceId: id,
+    voterToken,
+  });
 
   const response = NextResponse.json({ liked, count });
 

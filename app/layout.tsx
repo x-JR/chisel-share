@@ -2,9 +2,42 @@ import type { Metadata } from 'next';
 import './globals.css';
 import TokenManager from '@/components/TokenManager';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://chiselshare.com';
+
 export const metadata: Metadata = {
-  title: 'Chisel Share',
-  description: 'Browse and share QP Chisel schematics for Vintage Story',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'Chisel Share — Vintage Story Schematic Gallery',
+    template: '%s | Chisel Share',
+  },
+  description:
+    'Browse, upload, and share QP Chisel schematics for Vintage Story. The first community gallery for Vintage Story building schematics — find structures, download files, and showcase your creations.',
+  keywords: [
+    'Vintage Story',
+    'Vintage Story schematics',
+    'QP Chisel',
+    'chisel schematics',
+    'Vintage Story building',
+    'Vintage Story mods',
+    'VS schematics',
+    'Vintage Story download',
+    'Vintage Story community',
+  ],
+  alternates: {
+    canonical: siteUrl,
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Chisel Share',
+    title: 'Chisel Share — Vintage Story Schematic Gallery',
+    description:
+      'The first community gallery for Vintage Story QP Chisel schematics. Browse, upload, and share building schematics.',
+    url: siteUrl,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

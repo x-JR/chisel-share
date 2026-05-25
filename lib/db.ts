@@ -199,6 +199,22 @@ export async function countSearchResults(query: string): Promise<number> {
   return (rows[0] as { count: number }).count;
 }
 
+export async function getAllSchematicIdsForSitemap(): Promise<{ id: string; uploaded_at: number }[]> {
+  const pool = await db();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT id, uploaded_at FROM schematics WHERE collection_id IS NULL ORDER BY uploaded_at DESC'
+  );
+  return rows as { id: string; uploaded_at: number }[];
+}
+
+export async function getAllCollectionIdsForSitemap(): Promise<{ id: string; created_at: number }[]> {
+  const pool = await db();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT id, created_at FROM collections ORDER BY created_at DESC'
+  );
+  return rows as { id: string; created_at: number }[];
+}
+
 export async function getSchematic(id: string): Promise<SchematicRecord | undefined> {
   const pool = await db();
   const [rows] = await pool.execute<RowDataPacket[]>(
@@ -237,6 +253,29 @@ export async function insertSchematic(record: SchematicRecord): Promise<void> {
 export async function deleteSchematic(id: string): Promise<void> {
   const pool = await db();
   await pool.execute('DELETE FROM schematics WHERE id = ?', [id]);
+}
+
+export async function updateSchematicMeta(
+  id: string,
+  fields: { display_name: string; description: string | null }
+): Promise<void> {
+  const pool = await db();
+  await pool.execute(
+    'UPDATE schematics SET display_name = ?, description = ? WHERE id = ?',
+    [fields.display_name, fields.description, id]
+  );
+}
+
+export async function setSchematicOrders(
+  updates: Array<{ id: string; collection_order: number }>
+): Promise<void> {
+  const pool = await db();
+  for (const u of updates) {
+    await pool.execute(
+      'UPDATE schematics SET collection_order = ? WHERE id = ?',
+      [u.collection_order, u.id]
+    );
+  }
 }
 
 export async function incrementDownloadCount(id: string): Promise<void> {
@@ -384,6 +423,17 @@ export async function countCollectionSearchResults(query: string): Promise<numbe
 export async function deleteCollection(id: string): Promise<void> {
   const pool = await db();
   await pool.execute('DELETE FROM collections WHERE id = ?', [id]);
+}
+
+export async function updateCollectionMeta(
+  id: string,
+  fields: { name: string; description: string | null }
+): Promise<void> {
+  const pool = await db();
+  await pool.execute(
+    'UPDATE collections SET name = ?, description = ? WHERE id = ?',
+    [fields.name, fields.description, id]
+  );
 }
 
 // ─── Collection Likes ────────────────────────────────────────────────────────

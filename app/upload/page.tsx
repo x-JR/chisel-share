@@ -25,9 +25,10 @@ export default function UploadPage() {
       <div className="mt-6 bg-slate-900 border border-slate-800 rounded-xl p-6">
         <h2 className="text-slate-300 font-semibold mb-3">How to export your schematic</h2>
         <ol className="text-slate-400 text-sm space-y-2 list-decimal list-inside">
-          <li>In Vintage Story, place your chisel block on the ground</li>
-          <li>Right-click the block with the QP Chisel Pantograph item</li>
-          <li>Select &ldquo;Export&rdquo; to save as an .xml file</li>
+          <li>In Vintage Story, place your chiselled block on the ground</li>
+          <li>Left-click the block with the QP Chisel Pantograph in hand</li>
+          <li>Press <code className="bg-slate-800 px-1.5 py-0.5 rounded text-xs text-amber-300">P</code> to open the save / load shape menu</li>
+          <li>Select &ldquo;Save Shape&rdquo; to save the schematic as an .xml file</li>
           <li>
             Find the file in{' '}
             <code className="bg-slate-800 px-1.5 py-0.5 rounded text-xs text-amber-300">

@@ -18,8 +18,10 @@ export default function SortSelector({ currentSort }: Props) {
   const searchParams = useSearchParams();
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const value = e.target.value;
+    document.cookie = `sort_pref=${value}; max-age=31536000; path=/; SameSite=Lax`;
     const params = new URLSearchParams(searchParams.toString());
-    params.set('sort', e.target.value);
+    params.set('sort', value);
     params.set('page', '1');
     router.push(`/?${params.toString()}`);
   }

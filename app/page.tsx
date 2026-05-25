@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { cookies } from 'next/headers';
 import {
   listSchematics,
   countSchematics,
@@ -26,7 +27,8 @@ function parseLimit(raw: string | undefined): AllowedLimit {
 }
 
 function parseSort(raw: string | undefined): 'newest' | 'most_liked' {
-  return raw === 'most_liked' ? 'most_liked' : 'newest';
+  if (raw === 'most_liked' || raw === 'newest') return raw;
+  return 'most_liked'; // default
 }
 
 interface PageProps {
@@ -36,7 +38,9 @@ interface PageProps {
 export default async function GalleryPage({ searchParams }: PageProps) {
   const { page: pageParam, limit: limitParam, search: searchParam, sort: sortParam } = await searchParams;
   const limit = parseLimit(limitParam);
-  const sort = parseSort(sortParam);
+  const cookieStore = await cookies();
+  const cookieSort = cookieStore.get('sort_pref')?.value;
+  const sort = parseSort(sortParam ?? cookieSort);
   const page = Math.max(1, parseInt(pageParam ?? '1', 10));
   const offset = (page - 1) * limit;
   const searchQuery = searchParam?.trim() ?? '';

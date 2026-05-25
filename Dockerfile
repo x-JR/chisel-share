@@ -9,6 +9,10 @@ RUN npm ci
 # Copy source code (including textures/)
 COPY . .
 
+# NEXT_PUBLIC_* vars are baked into the client bundle at build time
+ARG NEXT_PUBLIC_SITE_URL=https://chisel.tekkie.com.au
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+
 # Build Next.js
 RUN npm run build
 
