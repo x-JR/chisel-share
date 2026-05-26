@@ -23,6 +23,12 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`stone/rock/${m[1]}1.png`);
   }
 
+  // game:cobbleskull-{rock}
+  {
+    const m = blockcode.match(/^game:cobbleskull-(.+)$/);
+    if (m) return tex(`stone/cobbleskull/${m[1]}.png`);
+  }
+
   // game:cobblestone-{rock}
   {
     const m = blockcode.match(/^game:cobblestone-(.+)$/);
