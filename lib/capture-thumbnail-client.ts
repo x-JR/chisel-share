@@ -69,6 +69,8 @@ export async function captureThumbnail(xmlContent: string): Promise<Blob | null>
           (tex) => {
             tex.magFilter = THREE.NearestFilter;
             tex.minFilter = THREE.NearestFilter;
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
             texCache.set(matIdx, tex);
             resolve(tex);
           },
@@ -105,13 +107,31 @@ export async function captureThumbnail(xmlContent: string): Promise<Blob | null>
       const ch = (c.y2 - c.y1 + 1) * V;
       const cd = (c.z2 - c.z1 + 1) * V;
       const geo = new THREE.BoxGeometry(cw, ch, cd);
+
+      // World-space UV mapping — same logic as SchematicViewer
+      const meshPX = ((c.x1 + c.x2) / 2) * V;
+      const meshPY = ((c.y1 + c.y2) / 2) * V;
+      const meshPZ = ((c.z1 + c.z2) / 2) * V;
+      const posAttr = geo.attributes.position;
+      const norAttr = geo.attributes.normal;
+      const uvAttr  = geo.attributes.uv;
+      for (let i = 0; i < posAttr.count; i++) {
+        const nx = norAttr.getX(i);
+        const ny = norAttr.getY(i);
+        const wx = posAttr.getX(i) + meshPX;
+        const wy = posAttr.getY(i) + meshPY;
+        const wz = posAttr.getZ(i) + meshPZ;
+        let u: number, v: number;
+        if (Math.abs(nx) > 0.5)      { u = wz; v = wy; }  // ±X face
+        else if (Math.abs(ny) > 0.5) { u = wx; v = wz; }  // ±Y face
+        else                         { u = wx; v = wy; }  // ±Z face
+        uvAttr.setXY(i, u, v);
+      }
+      uvAttr.needsUpdate = true;
+
       const mat = await getMaterial(c.matIdx);
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(
-        ((c.x1 + c.x2) / 2) * V,
-        ((c.y1 + c.y2) / 2) * V,
-        ((c.z1 + c.z2) / 2) * V,
-      );
+      mesh.position.set(meshPX, meshPY, meshPZ);
       scene.add(mesh);
     }
 
