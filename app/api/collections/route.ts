@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   insertSchematic,
   insertCollection,
+  insertCollectionImage,
+  setCollectionThumbnailImage,
 } from '@/lib/db';
 import { parseSchematicMeta } from '@/lib/schematic-parser';
 import { generateThumbnail } from '@/lib/thumbnail';
@@ -15,7 +17,10 @@ import fs from 'fs/promises';
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 const MAX_THUMB_SIZE = 512 * 1024; // 512 KB
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const JPEG_MAGIC = Buffer.from([0xff, 0xd8, 0xff]);
 const MAX_FILES = 20;
+const MAX_IMAGES = 5;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 function schematicsDir(): string {
   const dataDir = process.env.DATA_DIR ?? process.cwd();
@@ -25,6 +30,11 @@ function schematicsDir(): string {
 function thumbsDir(): string {
   const dataDir = process.env.DATA_DIR ?? process.cwd();
   return path.join(dataDir, 'data', 'thumbs');
+}
+
+function collectionImagesDir(): string {
+  const dataDir = process.env.DATA_DIR ?? process.cwd();
+  return path.join(dataDir, 'data', 'collection-images');
 }
 
 // Shared upload bucket: 5 uploads (schematics OR collections) per 10 minutes per IP
@@ -182,6 +192,49 @@ export async function POST(request: NextRequest) {
     uploader_token: uploaderToken,
     created_at: now,
   });
+
+  // Save custom collection images (optional)
+  const imageCountRaw = parseInt(formData.get('image_count') as string ?? '0', 10);
+  const imageCount = isNaN(imageCountRaw) ? 0 : Math.min(imageCountRaw, MAX_IMAGES);
+  const thumbnailIndexRaw = parseInt(formData.get('thumbnail_image_index') as string ?? '0', 10);
+  const thumbnailIndex = isNaN(thumbnailIndexRaw) ? 0 : thumbnailIndexRaw;
+
+  if (imageCount > 0) {
+    const imgDir = collectionImagesDir();
+    await fs.mkdir(imgDir, { recursive: true });
+
+    let thumbnailImageId: string | null = null;
+    for (let i = 0; i < imageCount; i++) {
+      const imgFile = formData.get(`image_${i}`);
+      if (!(imgFile instanceof File) || imgFile.size === 0 || imgFile.size > MAX_IMAGE_SIZE) continue;
+
+      const imgBuf = Buffer.from(await imgFile.arrayBuffer());
+      let ext: string | null = null;
+      if (imgBuf.length >= PNG_MAGIC.length && imgBuf.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)) {
+        ext = 'png';
+      } else if (imgBuf.length >= JPEG_MAGIC.length && imgBuf.subarray(0, JPEG_MAGIC.length).equals(JPEG_MAGIC)) {
+        ext = 'jpg';
+      }
+      if (!ext) continue;
+
+      const imgId = uuidv4();
+      await fs.writeFile(path.join(imgDir, `${imgId}.${ext}`), imgBuf);
+      await insertCollectionImage({
+        id: imgId,
+        collection_id: collectionId,
+        display_order: i,
+        ext,
+        created_at: now,
+      });
+
+      if (i === thumbnailIndex) thumbnailImageId = imgId;
+      if (thumbnailImageId === null) thumbnailImageId = imgId; // fallback to first valid image
+    }
+
+    if (thumbnailImageId) {
+      await setCollectionThumbnailImage(collectionId, thumbnailImageId);
+    }
+  }
 
   logAction({
     request,

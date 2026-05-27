@@ -78,6 +78,33 @@ function getPool(): mysql.Pool {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
       await pool.execute(`
+        CREATE TABLE IF NOT EXISTS collection_images (
+          id            VARCHAR(36)  NOT NULL,
+          collection_id VARCHAR(36)  NOT NULL,
+          display_order INT          NOT NULL DEFAULT 0,
+          ext           VARCHAR(4)   NOT NULL,
+          created_at    INT          NOT NULL,
+          PRIMARY KEY (id),
+          INDEX idx_ci_collection (collection_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      await pool.execute(`
+        ALTER TABLE collections
+          ADD COLUMN IF NOT EXISTS thumbnail_image_id VARCHAR(36) NULL
+      `).catch(() => { /* already present */ });
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS collection_reports (
+          id             INT          NOT NULL AUTO_INCREMENT,
+          collection_id  VARCHAR(36)  NOT NULL,
+          reporter_token VARCHAR(36)  NOT NULL,
+          reason         VARCHAR(50)  NOT NULL DEFAULT 'other',
+          created_at     INT          NOT NULL,
+          PRIMARY KEY (id),
+          UNIQUE KEY unique_report (collection_id, reporter_token),
+          INDEX idx_cr_collection (collection_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      await pool.execute(`
         CREATE TABLE IF NOT EXISTS logs (
           id            INT          NOT NULL AUTO_INCREMENT,
           timestamp     INT          NOT NULL,
@@ -129,6 +156,15 @@ export interface CollectionRecord {
   uploader_token: string | null;
   created_at: number; // Unix timestamp (seconds)
   like_count?: number; // populated by queries that include a subquery
+  thumbnail_image_id?: string | null;
+}
+
+export interface CollectionImageRecord {
+  id: string;
+  collection_id: string;
+  display_order: number;
+  ext: string; // 'jpg' | 'png'
+  created_at: number;
 }
 
 // ─── Schematics ──────────────────────────────────────────────────────────────
@@ -473,6 +509,103 @@ export async function toggleCollectionLike(collectionId: string, voterToken: str
     );
     return true;
   }
+}
+
+// ─── Collection Images ────────────────────────────────────────────────────────
+
+export async function insertCollectionImage(record: CollectionImageRecord): Promise<void> {
+  const pool = await db();
+  await pool.execute(
+    `INSERT INTO collection_images (id, collection_id, display_order, ext, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [record.id, record.collection_id, record.display_order, record.ext, record.created_at]
+  );
+}
+
+export async function getCollectionImages(collectionId: string): Promise<CollectionImageRecord[]> {
+  const pool = await db();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM collection_images WHERE collection_id = ? ORDER BY display_order ASC',
+    [collectionId]
+  );
+  return rows as CollectionImageRecord[];
+}
+
+export async function deleteCollectionImage(id: string): Promise<void> {
+  const pool = await db();
+  await pool.execute('DELETE FROM collection_images WHERE id = ?', [id]);
+}
+
+export async function setCollectionImageOrders(
+  updates: Array<{ id: string; display_order: number }>
+): Promise<void> {
+  const pool = await db();
+  for (const u of updates) {
+    await pool.execute(
+      'UPDATE collection_images SET display_order = ? WHERE id = ?',
+      [u.display_order, u.id]
+    );
+  }
+}
+
+export async function setCollectionThumbnailImage(
+  collectionId: string,
+  imageId: string | null
+): Promise<void> {
+  const pool = await db();
+  await pool.execute(
+    'UPDATE collections SET thumbnail_image_id = ? WHERE id = ?',
+    [imageId, collectionId]
+  );
+}
+
+// ─── Collection Reports ───────────────────────────────────────────────────────
+
+export async function insertCollectionReport(
+  collectionId: string,
+  reporterToken: string,
+  reason: string
+): Promise<void> {
+  const pool = await db();
+  await pool.execute(
+    `INSERT INTO collection_reports (collection_id, reporter_token, reason, created_at)
+     VALUES (?, ?, ?, ?)`,
+    [collectionId, reporterToken, reason, Math.floor(Date.now() / 1000)]
+  );
+}
+
+export async function getCollectionReportCount(collectionId: string): Promise<number> {
+  const pool = await db();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT COUNT(*) AS count FROM collection_reports WHERE collection_id = ?',
+    [collectionId]
+  );
+  return (rows[0] as { count: number }).count;
+}
+
+export async function hasReported(collectionId: string, reporterToken: string): Promise<boolean> {
+  const pool = await db();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT 1 FROM collection_reports WHERE collection_id = ? AND reporter_token = ?',
+    [collectionId, reporterToken]
+  );
+  return rows.length > 0;
+}
+
+export async function getReportedCollections(): Promise<
+  { id: string; name: string; report_count: number; last_reported_at: number }[]
+> {
+  const pool = await db();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT c.id, c.name,
+       COUNT(r.id) AS report_count,
+       MAX(r.created_at) AS last_reported_at
+     FROM collection_reports r
+     JOIN collections c ON c.id = r.collection_id
+     GROUP BY c.id, c.name
+     ORDER BY report_count DESC, last_reported_at DESC`
+  );
+  return rows as { id: string; name: string; report_count: number; last_reported_at: number }[];
 }
 
 // ─── Logs ─────────────────────────────────────────────────────────────────────

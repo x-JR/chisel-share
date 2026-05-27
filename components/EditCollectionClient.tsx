@@ -8,6 +8,7 @@ import DownloadButton from './DownloadButton';
 import DeleteCollectionButton from './DeleteCollectionButton';
 import SchematicCard from './SchematicCard';
 import RegenerateThumbnailButton from './RegenerateThumbnailButton';
+import ReportButton from './ReportButton';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,12 @@ export interface SchematicData {
   uploaded_at: number;
   download_count: number;
   like_count: number;
+}
+
+export interface CollectionImageData {
+  id: string;
+  display_order: number;
+  ext: string;
 }
 
 interface ExistingPart {
@@ -47,22 +54,47 @@ interface NewPart {
 
 type EditPart = ExistingPart | NewPart;
 
+interface ExistingImage {
+  kind: 'existing';
+  id: string;
+  ext: string;
+  display_order: number;
+  isThumb: boolean;
+}
+
+interface NewImage {
+  kind: 'new';
+  key: string;
+  file: File;
+  previewUrl: string;
+  isThumb: boolean;
+}
+
+type EditImage = ExistingImage | NewImage;
+
 interface Props {
   collection: CollectionData;
   schematics: SchematicData[];
+  images: CollectionImageData[];
   likeCount: number;
   canEdit: boolean;
   isAdmin: boolean;
+  reportCount?: number;
 }
+
+const MAX_IMAGES = 5;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function EditCollectionClient({
   collection,
   schematics,
+  images: initialImages,
   likeCount,
   canEdit,
   isAdmin,
+  reportCount,
 }: Props) {
   const router = useRouter();
 
@@ -80,10 +112,25 @@ export default function EditCollectionClient({
       description: s.description ?? '',
     }))
   );
+  const [editImages, setEditImages] = useState<EditImage[]>(() =>
+    initialImages
+      .slice()
+      .sort((a, b) => a.display_order - b.display_order)
+      .map((img, idx) => ({
+        kind: 'existing' as const,
+        id: img.id,
+        ext: img.ext,
+        display_order: img.display_order,
+        isThumb: idx === 0,
+      }))
+  );
+  const [imageEditError, setImageEditError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draggingOver, setDraggingOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageEditInputRef = useRef<HTMLInputElement>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
 
   // ── Part helpers ─────────────────────────────────────────────────────────
 
@@ -154,6 +201,56 @@ export default function EditCollectionClient({
     if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
   }
 
+  // ── Image helpers ─────────────────────────────────────────────────────────
+
+  function addEditImageFiles(files: FileList | File[]) {
+    setImageEditError(null);
+    const incoming = Array.from(files).filter((f) => f.type === 'image/jpeg' || f.type === 'image/png');
+    if (!incoming.length) {
+      setImageEditError('Only JPEG and PNG images are accepted');
+      return;
+    }
+    setEditImages((prev) => {
+      const slots = MAX_IMAGES - prev.length;
+      if (slots <= 0) return prev;
+      const toAdd: NewImage[] = incoming.slice(0, slots).map((f, i) => ({
+        kind: 'new' as const,
+        key: `${Date.now()}-${i}`,
+        file: f,
+        previewUrl: URL.createObjectURL(f),
+        isThumb: false,
+      }));
+      const combined = [...prev, ...toAdd];
+      if (!combined.some((img) => img.isThumb) && combined.length > 0) {
+        combined[0] = { ...combined[0], isThumb: true };
+      }
+      return combined;
+    });
+  }
+
+  function removeEditImage(index: number) {
+    setEditImages((prev) => {
+      const wasThumb = prev[index].isThumb;
+      const next = prev.filter((_, i) => i !== index);
+      if (wasThumb && next.length > 0) next[0] = { ...next[0], isThumb: true };
+      return next;
+    });
+  }
+
+  function setEditImageThumb(index: number) {
+    setEditImages((prev) => prev.map((img, i) => ({ ...img, isThumb: i === index })));
+  }
+
+  function moveEditImage(from: number, to: number) {
+    setEditImages((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      // Keep thumbnail assignment stable
+      return next;
+    });
+  }
+
   // ── Save ─────────────────────────────────────────────────────────────────
 
   async function handleSave() {
@@ -194,6 +291,32 @@ export default function EditCollectionClient({
         if (p.thumbnailBlob) fd.append(`new_thumbnail_${i}`, p.thumbnailBlob, 'thumbnail.png');
       });
 
+      // Image management
+      const removedImageIds = initialImages
+        .map((img) => img.id)
+        .filter((imgId) => !editImages.some((ei) => ei.kind === 'existing' && ei.id === imgId));
+      fd.append('img_remove', JSON.stringify(removedImageIds));
+
+      const existingImgOrder = editImages
+        .filter((img): img is ExistingImage => img.kind === 'existing')
+        .map((img) => img.id);
+      fd.append('img_order', JSON.stringify(existingImgOrder));
+
+      const newImages = editImages.filter((img): img is NewImage => img.kind === 'new');
+      fd.append('img_new_count', String(newImages.length));
+      newImages.forEach((img, i) => fd.append(`img_new_${i}`, img.file));
+
+      const thumbImage = editImages.find((img) => img.isThumb);
+      if (thumbImage?.kind === 'existing') {
+        fd.append('thumbnail_image_id', thumbImage.id);
+      } else if (thumbImage?.kind === 'new') {
+        // New thumbnail image; server will assign ID — fall back to first image via empty string
+        // The server will default to the first valid image if thumbnail_image_id is absent
+        fd.append('thumbnail_image_id', '');
+      } else if (editImages.length === 0) {
+        fd.append('thumbnail_image_id', '');
+      }
+
       const res = await fetch(`/api/collections/${collection.id}`, {
         method: 'PATCH',
         body: fd,
@@ -222,8 +345,21 @@ export default function EditCollectionClient({
         description: s.description ?? '',
       }))
     );
+    setEditImages(
+      initialImages
+        .slice()
+        .sort((a, b) => a.display_order - b.display_order)
+        .map((img, idx) => ({
+          kind: 'existing' as const,
+          id: img.id,
+          ext: img.ext,
+          display_order: img.display_order,
+          isThumb: idx === 0,
+        }))
+    );
     setEditing(false);
     setError(null);
+    setImageEditError(null);
   }
 
   // ── View mode ─────────────────────────────────────────────────────────────
@@ -231,6 +367,47 @@ export default function EditCollectionClient({
   if (!editing) {
     return (
       <>
+        {/* Custom image carousel */}
+        {initialImages.length > 0 && (
+          <div className="mb-8 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/collections/${collection.id}/images/${initialImages[carouselIndex]?.id}`}
+                alt={`Collection image ${carouselIndex + 1}`}
+                className="w-full object-contain max-h-96 bg-slate-950"
+              />
+              {initialImages.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setCarouselIndex((i) => (i - 1 + initialImages.length) % initialImages.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-slate-900/80 hover:bg-slate-800 text-slate-200 rounded-full w-8 h-8 flex items-center justify-center transition-colors"
+                    aria-label="Previous image"
+                  >‹</button>
+                  <button
+                    onClick={() => setCarouselIndex((i) => (i + 1) % initialImages.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-slate-900/80 hover:bg-slate-800 text-slate-200 rounded-full w-8 h-8 flex items-center justify-center transition-colors"
+                    aria-label="Next image"
+                  >›</button>
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {initialImages.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCarouselIndex(idx)}
+                        className={[
+                          'w-2 h-2 rounded-full transition-colors',
+                          idx === carouselIndex ? 'bg-amber-400' : 'bg-slate-600 hover:bg-slate-400',
+                        ].join(' ')}
+                        aria-label={`Go to image ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -239,6 +416,11 @@ export default function EditCollectionClient({
               <span className="text-xs bg-amber-700/40 text-amber-300 border border-amber-700/60 px-2 py-0.5 rounded-full font-medium">
                 Collection · {schematics.length} {schematics.length === 1 ? 'part' : 'parts'}
               </span>
+              {isAdmin && typeof reportCount === 'number' && reportCount > 0 && (
+                <span className="text-xs bg-red-900/40 text-red-300 border border-red-700/60 px-2 py-0.5 rounded-full font-medium">
+                  ⚑ {reportCount} {reportCount === 1 ? 'report' : 'reports'}
+                </span>
+              )}
             </div>
             {collection.description && (
               <p className="text-slate-300 text-sm mt-3 leading-relaxed max-w-2xl">
@@ -273,7 +455,7 @@ export default function EditCollectionClient({
               <LikeButton apiPath={`/api/collections/${collection.id}/like`} initialCount={likeCount} />
             </div>
           ) : (
-            <div className="shrink-0 flex flex-col gap-2 w-48">
+            <div className="shrink-0 grid grid-cols-2 gap-2 w-48">
               <DownloadButton
                 href={`/api/collections/${collection.id}/download`}
                 filename={`${collection.name.replace(/[^a-zA-Z0-9 _-]/g, '_')}.zip`}
@@ -281,6 +463,9 @@ export default function EditCollectionClient({
                 className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300"
               />
               <LikeButton apiPath={`/api/collections/${collection.id}/like`} initialCount={likeCount} />
+              <div className="col-span-2">
+                <ReportButton collectionId={collection.id} />
+              </div>
             </div>
           )}
         </div>
@@ -365,6 +550,101 @@ export default function EditCollectionClient({
             />
           </div>
         </div>
+      </div>
+
+      {/* Image management */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-slate-300 font-medium text-sm">
+            Collection Images{' '}
+            <span className="text-slate-500 font-normal">(optional, up to {MAX_IMAGES})</span>
+          </h3>
+          <span className="text-slate-500 text-xs">{editImages.length} / {MAX_IMAGES}</span>
+        </div>
+        <p className="text-slate-500 text-xs">
+          Photos showing how the schematics fit together. The starred image is used as the gallery card thumbnail.
+        </p>
+
+        {editImages.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {editImages.map((img, i) => (
+              <div key={img.kind === 'existing' ? img.id : img.key} className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={
+                    img.kind === 'existing'
+                      ? `/api/collections/${collection.id}/images/${img.id}`
+                      : img.previewUrl
+                  }
+                  alt={`Image ${i + 1}`}
+                  className={[
+                    'w-full aspect-square object-cover rounded-lg border-2 transition-colors',
+                    img.isThumb ? 'border-amber-500' : 'border-slate-700',
+                  ].join(' ')}
+                />
+                <div className="absolute inset-0 flex flex-col items-end justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <button
+                    type="button"
+                    onClick={() => removeEditImage(i)}
+                    aria-label="Remove image"
+                    className="pointer-events-auto bg-red-700 hover:bg-red-600 text-white text-xs w-6 h-6 flex items-center justify-center rounded transition-colors"
+                  >×</button>
+                  <div className="flex gap-1 pointer-events-auto">
+                    <button
+                      type="button"
+                      onClick={() => i > 0 && moveEditImage(i, i - 1)}
+                      disabled={i === 0}
+                      aria-label="Move left"
+                      className="bg-slate-700 hover:bg-slate-600 disabled:opacity-20 text-white text-xs w-6 h-6 flex items-center justify-center rounded transition-colors"
+                    >◀</button>
+                    <button
+                      type="button"
+                      onClick={() => i < editImages.length - 1 && moveEditImage(i, i + 1)}
+                      disabled={i === editImages.length - 1}
+                      aria-label="Move right"
+                      className="bg-slate-700 hover:bg-slate-600 disabled:opacity-20 text-white text-xs w-6 h-6 flex items-center justify-center rounded transition-colors"
+                    >▶</button>
+                  </div>
+                </div>
+                {img.isThumb ? (
+                  <span className="absolute top-1 left-1 bg-amber-600 text-white text-xs px-1.5 py-0.5 rounded font-medium">
+                    ★
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setEditImageThumb(i)}
+                    title="Set as gallery thumbnail"
+                    className="absolute top-1 left-1 bg-slate-800/80 hover:bg-amber-700 text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    ☆
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {editImages.length < MAX_IMAGES && (
+          <button
+            type="button"
+            onClick={() => imageEditInputRef.current?.click()}
+            className="w-full border-2 border-dashed border-slate-600 hover:border-slate-500 rounded-xl py-3 text-slate-400 hover:text-slate-300 text-sm transition-colors"
+          >
+            + Add images (JPEG/PNG, max 5 MB each)
+          </button>
+        )}
+        <input
+          ref={imageEditInputRef}
+          type="file"
+          multiple
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+          className="hidden"
+          onChange={(e) => { if (e.target.files) addEditImageFiles(e.target.files); e.target.value = ''; }}
+        />
+        {imageEditError && (
+          <p className="text-amber-400 text-xs">{imageEditError}</p>
+        )}
       </div>
 
       {/* Parts editor */}

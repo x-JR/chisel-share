@@ -12,14 +12,26 @@ interface FilePart {
   capturingThumb: boolean;
 }
 
+interface ImageFile {
+  file: File;
+  previewUrl: string;
+  isThumb: boolean;
+}
+
+const MAX_IMAGES = 5;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
 export default function UploadCollectionForm() {
   const [parts, setParts] = useState<FilePart[]>([]);
   const [collectionName, setCollectionName] = useState('');
   const [collectionDescription, setCollectionDescription] = useState('');
+  const [images, setImages] = useState<ImageFile[]>([]);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draggingOver, setDraggingOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const addFiles = useCallback(async (files: FileList | File[]) => {
@@ -87,6 +99,50 @@ export default function UploadCollectionForm() {
     );
   }
 
+  function addImageFiles(files: FileList | File[]) {
+    setImageError(null);
+    const incoming = Array.from(files).filter((f) => f.type === 'image/jpeg' || f.type === 'image/png');
+    if (!incoming.length) {
+      setImageError('Only JPEG and PNG images are accepted');
+      return;
+    }
+    setImages((prev) => {
+      const slots = MAX_IMAGES - prev.length;
+      if (slots <= 0) return prev;
+      const toAdd: ImageFile[] = incoming.slice(0, slots).map((f, i) => {
+        if (f.size > MAX_IMAGE_BYTES) {
+          setImageError(`"${f.name}" exceeds the 5 MB limit`);
+        }
+        return {
+          file: f,
+          previewUrl: URL.createObjectURL(f),
+          isThumb: prev.length === 0 && i === 0,
+        };
+      });
+      // If adding and none is thumb yet, make first one thumb
+      const combined = [...prev, ...toAdd];
+      if (!combined.some((img) => img.isThumb) && combined.length > 0) {
+        combined[0] = { ...combined[0], isThumb: true };
+      }
+      return combined;
+    });
+  }
+
+  function removeImage(index: number) {
+    setImages((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      // If we removed the thumbnail, make first remaining image the thumbnail
+      if (prev[index].isThumb && next.length > 0) {
+        next[0] = { ...next[0], isThumb: true };
+      }
+      return next;
+    });
+  }
+
+  function setImageThumb(index: number) {
+    setImages((prev) => prev.map((img, i) => ({ ...img, isThumb: i === index })));
+  }
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDraggingOver(false);
@@ -120,6 +176,15 @@ export default function UploadCollectionForm() {
         formData.append(`display_name_${i}`, p.displayName.trim() || p.file.name);
         if (p.description.trim()) formData.append(`description_${i}`, p.description.trim());
         if (p.thumbnailBlob) formData.append(`thumbnail_${i}`, p.thumbnailBlob, 'thumbnail.png');
+      }
+
+      // Custom collection images
+      const validImages = images.filter((img) => img.file.size <= MAX_IMAGE_BYTES);
+      formData.append('image_count', String(validImages.length));
+      const thumbIndex = validImages.findIndex((img) => img.isThumb);
+      formData.append('thumbnail_image_index', String(thumbIndex >= 0 ? thumbIndex : 0));
+      for (let i = 0; i < validImages.length; i++) {
+        formData.append(`image_${i}`, validImages[i].file);
       }
 
       const res = await fetch('/api/collections', { method: 'POST', body: formData });
@@ -167,6 +232,86 @@ export default function UploadCollectionForm() {
             className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
           />
         </div>
+      </div>
+
+      {/* Collection images */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-slate-300 text-sm font-medium">
+            Collection Images{' '}
+            <span className="text-slate-500 font-normal">(optional — up to {MAX_IMAGES}, JPEG/PNG, max 5 MB each)</span>
+          </label>
+          <span className="text-slate-500 text-xs">{images.length} / {MAX_IMAGES}</span>
+        </div>
+        <p className="text-slate-500 text-xs">
+          These photos show how the schematics fit together. If none are uploaded, a 3D thumbnail is generated automatically.
+        </p>
+
+        {images.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {images.map((img, i) => (
+              <div key={i} className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={img.previewUrl}
+                  alt={`Collection image ${i + 1}`}
+                  className={[
+                    'w-full aspect-square object-cover rounded-lg border-2 transition-colors',
+                    img.isThumb ? 'border-amber-500' : 'border-slate-700',
+                  ].join(' ')}
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-end pb-2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1">
+                    {!img.isThumb && (
+                      <button
+                        type="button"
+                        onClick={() => setImageThumb(i)}
+                        title="Use as gallery thumbnail"
+                        className="bg-amber-600 hover:bg-amber-500 text-white text-xs px-2 py-1 rounded transition-colors"
+                      >
+                        ★ Thumb
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      aria-label="Remove image"
+                      className="bg-red-700 hover:bg-red-600 text-white text-xs px-2 py-1 rounded transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+                {img.isThumb && (
+                  <span className="absolute top-1 left-1 bg-amber-600 text-white text-xs px-1.5 py-0.5 rounded font-medium">
+                    Thumbnail
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {images.length < MAX_IMAGES && (
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            className="w-full border-2 border-dashed border-slate-600 hover:border-slate-500 rounded-xl py-4 text-slate-400 hover:text-slate-300 text-sm transition-colors"
+          >
+            + Add images
+          </button>
+        )}
+        <input
+          ref={imageInputRef}
+          type="file"
+          multiple
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+          className="hidden"
+          onChange={(e) => { if (e.target.files) addImageFiles(e.target.files); e.target.value = ''; }}
+        />
+        {imageError && (
+          <p className="text-amber-400 text-xs">{imageError}</p>
+        )}
       </div>
 
       {/* Drop zone */}

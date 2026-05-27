@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import ThumbnailImage from './ThumbnailImage';
 
@@ -9,6 +11,7 @@ interface Props {
   memberCount: number;
   firstSchematicId: string | null;
   likeCount?: number;
+  thumbnailImageId?: string | null;
 }
 
 function formatDate(ts: number): string {
@@ -27,13 +30,22 @@ export default function CollectionCard({
   memberCount,
   firstSchematicId,
   likeCount = 0,
+  thumbnailImageId,
 }: Props) {
   return (
     <Link href={`/view/collection/${id}`} className="block group h-full">
       <div className="bg-slate-800 border border-slate-700 rounded-xl hover:border-amber-500/60 transition-colors duration-200 h-full flex flex-col overflow-hidden">
         {/* Thumbnail */}
         <div className="bg-slate-900 h-32 flex items-center justify-center relative">
-          {firstSchematicId ? (
+          {thumbnailImageId ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`/api/collections/${id}/images/${thumbnailImageId}`}
+              alt={name}
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+          ) : firstSchematicId ? (
             <ThumbnailImage id={firstSchematicId} alt={name} />
           ) : (
             <span className="text-slate-600 text-4xl">📦</span>

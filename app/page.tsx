@@ -128,6 +128,7 @@ export default async function GalleryPage({ searchParams }: PageProps) {
                 memberCount={collectionMemberCounts[c.id] ?? 0}
                 firstSchematicId={collectionFirstIds[c.id]}
                 likeCount={c.like_count ?? 0}
+                thumbnailImageId={c.thumbnail_image_id ?? null}
               />
             ))}
           </div>

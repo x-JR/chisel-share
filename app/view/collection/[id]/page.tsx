@@ -2,7 +2,13 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
-import { getCollection, getCollectionSchematics, getCollectionLikeCount } from '@/lib/db';
+import {
+  getCollection,
+  getCollectionSchematics,
+  getCollectionLikeCount,
+  getCollectionImages,
+  getCollectionReportCount,
+} from '@/lib/db';
 import EditCollectionClient from '@/components/EditCollectionClient';
 
 interface PageProps {
@@ -36,6 +42,7 @@ export default async function CollectionViewPage({ params }: PageProps) {
 
   const schematics = await getCollectionSchematics(id);
   const likeCount = await getCollectionLikeCount(id);
+  const images = await getCollectionImages(id);
 
   const cookieStore = await cookies();
   const uploaderToken = cookieStore.get('uploader_token')?.value;
@@ -43,6 +50,8 @@ export default async function CollectionViewPage({ params }: PageProps) {
   const isAdmin = !!adminToken && uploaderToken === adminToken;
   const canEdit =
     isAdmin || (!!collection.uploader_token && collection.uploader_token === uploaderToken);
+
+  const reportCount = isAdmin ? await getCollectionReportCount(id) : undefined;
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -72,9 +81,15 @@ export default async function CollectionViewPage({ params }: PageProps) {
           download_count: s.download_count,
           like_count: s.like_count ?? 0,
         }))}
+        images={images.map((img) => ({
+          id: img.id,
+          display_order: img.display_order,
+          ext: img.ext,
+        }))}
         likeCount={likeCount}
         canEdit={canEdit}
         isAdmin={isAdmin}
+        reportCount={reportCount}
       />
     </main>
   );
