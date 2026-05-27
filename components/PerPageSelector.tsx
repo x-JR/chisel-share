@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const OPTIONS = [12, 24, 48, 100] as const;
 
@@ -10,10 +10,13 @@ interface Props {
 
 export default function PerPageSelector({ currentLimit }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const limit = e.target.value;
-    router.push(`/?page=1&limit=${limit}`);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('limit', e.target.value);
+    params.set('page', '1');
+    router.push(`/?${params.toString()}`);
   }
 
   return (

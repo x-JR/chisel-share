@@ -11,6 +11,12 @@ function tex(path: string): string {
 }
 
 export function resolveTexture(blockcode: string): string | null {
+  // game:creativeglow-{number} / game:creativeblock-{number}  →  creative/col-{number}.png
+  {
+    const m = blockcode.match(/^game:creative(?:glow|block)-(\d+)$/);
+    if (m) return tex(`creative/col${m[1]}.png`);
+  }
+
   // game:rock-cracked-{rock}  (must be checked before generic rock rule)
   {
     const m = blockcode.match(/^game:rock-cracked-(.+)$/);

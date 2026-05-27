@@ -55,7 +55,7 @@ export default function ReportButton({ collectionId }: Props) {
     return (
       <button
         disabled
-        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border font-medium text-sm bg-slate-800 border-slate-700 text-slate-500 cursor-default opacity-60"
+        className="flex items-center justify-center gap-2 w-full h-full py-2.5 rounded-lg border font-medium text-sm bg-slate-800 border-slate-700 text-slate-500 cursor-default opacity-60"
       >
         ⚑ Reported
       </button>
@@ -66,7 +66,7 @@ export default function ReportButton({ collectionId }: Props) {
     <div className="relative">
       <button
         onClick={() => { setOpen((o) => !o); setError(null); }}
-        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border font-medium text-sm transition-colors bg-slate-800 border-slate-700 text-slate-400 hover:border-red-700/60 hover:text-red-400"
+        className="flex items-center justify-center gap-2 w-full h-full py-2.5 rounded-lg border font-medium text-sm transition-colors bg-slate-800 border-slate-700 text-slate-400 hover:border-red-700/60 hover:text-red-400"
       >
         ⚑ Report
       </button>

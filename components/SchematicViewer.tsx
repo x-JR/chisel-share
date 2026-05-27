@@ -74,9 +74,9 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         maxZ = Math.max(maxZ, c.z2);
       }
       const V = 1 / 16; // one voxel in world units
-      const cx = ((minX + maxX) / 2) * V;
-      const cy = ((minY + maxY) / 2) * V;
-      const cz = ((minZ + maxZ) / 2) * V;
+      const cx = ((minX + maxX + 1) / 2) * V;
+      const cy = ((minY + maxY + 1) / 2) * V;
+      const cz = ((minZ + maxZ + 1) / 2) * V;
       const span = Math.max(maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1) * V;
 
       // Camera
@@ -132,9 +132,14 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
       async function getTexMaterial(matIdx: number): Promise<THREE.MeshLambertMaterial> {
         if (texMatCache.has(matIdx)) return texMatCache.get(matIdx)!;
         const tex = await getTexture(matIdx);
+        const blockcode = schematic.blockcodes[matIdx] ?? '';
+        const isGlow = blockcode.startsWith('game:creativeglow-');
         let mat: THREE.MeshLambertMaterial;
         if (tex) {
-          mat = new THREE.MeshLambertMaterial({ map: tex });
+          mat = new THREE.MeshLambertMaterial({
+            map: tex,
+            ...(isGlow && { emissive: new THREE.Color(0xffffff), emissiveMap: tex, emissiveIntensity: 0.7 }),
+          });
         } else {
           const blockcode = schematic.blockcodes[matIdx] ?? '';
           const isGlow = blockcode.includes('creativeglow');
@@ -173,9 +178,9 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         // World-space UV mapping: derive UVs from each vertex's position in the
         // 16-voxel block grid so adjacent cuboids of the same material share the
         // same UV space and the texture tiles seamlessly across them.
-        const meshPX = ((c.x1 + c.x2) / 2) * V;
-        const meshPY = ((c.y1 + c.y2) / 2) * V;
-        const meshPZ = ((c.z1 + c.z2) / 2) * V;
+        const meshPX = ((c.x1 + c.x2 + 1) / 2) * V;
+        const meshPY = ((c.y1 + c.y2 + 1) / 2) * V;
+        const meshPZ = ((c.z1 + c.z2 + 1) / 2) * V;
         const posAttr = geo.attributes.position;
         const norAttr = geo.attributes.normal;
         const uvAttr = geo.attributes.uv;
@@ -206,7 +211,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
 
       // Grid helper at the base of the voxel space
       const grid = new THREE.GridHelper(1, 16, 0x555566, 0x333344);
-      grid.position.set(0.5 - V * 0.5, 0, 0.5 - V * 0.5);
+      grid.position.set(0.5, 0, 0.5);
       scene.add(grid);
 
       // Material swap — called by the toggle handler

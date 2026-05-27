@@ -26,9 +26,9 @@ export async function captureThumbnail(xmlContent: string): Promise<Blob | null>
     }
 
     const V = 1 / 16; // one voxel unit in world coords
-    const cx = ((minX + maxX) / 2) * V;
-    const cy = ((minY + maxY) / 2) * V;
-    const cz = ((minZ + maxZ) / 2) * V;
+    const cx = ((minX + maxX + 1) / 2) * V;
+    const cy = ((minY + maxY + 1) / 2) * V;
+    const cz = ((minZ + maxZ + 1) / 2) * V;
     const span = Math.max(maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1) * V;
 
     // Offscreen canvas — never attached to the DOM
@@ -83,9 +83,14 @@ export async function captureThumbnail(xmlContent: string): Promise<Blob | null>
     async function getMaterial(matIdx: number): Promise<THREE.MeshLambertMaterial> {
       if (matCache.has(matIdx)) return matCache.get(matIdx)!;
       const tex = await getTexture(matIdx);
+      const blockcode = schematic.blockcodes[matIdx] ?? '';
+      const isGlow = blockcode.startsWith('game:creativeglow-');
       let mat: THREE.MeshLambertMaterial;
       if (tex) {
-        mat = new THREE.MeshLambertMaterial({ map: tex });
+        mat = new THREE.MeshLambertMaterial({
+          map: tex,
+          ...(isGlow && { emissive: new THREE.Color(0xffffff), emissiveMap: tex, emissiveIntensity: 0.7 }),
+        });
       } else {
         const blockcode = schematic.blockcodes[matIdx] ?? '';
         const isGlow = blockcode.includes('creativeglow');
@@ -109,9 +114,9 @@ export async function captureThumbnail(xmlContent: string): Promise<Blob | null>
       const geo = new THREE.BoxGeometry(cw, ch, cd);
 
       // World-space UV mapping — same logic as SchematicViewer
-      const meshPX = ((c.x1 + c.x2) / 2) * V;
-      const meshPY = ((c.y1 + c.y2) / 2) * V;
-      const meshPZ = ((c.z1 + c.z2) / 2) * V;
+      const meshPX = ((c.x1 + c.x2 + 1) / 2) * V;
+      const meshPY = ((c.y1 + c.y2 + 1) / 2) * V;
+      const meshPZ = ((c.z1 + c.z2 + 1) / 2) * V;
       const posAttr = geo.attributes.position;
       const norAttr = geo.attributes.normal;
       const uvAttr  = geo.attributes.uv;

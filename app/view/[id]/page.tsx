@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { getSchematic } from '@/lib/db';
-import { blockcodeToColor } from '@/lib/texture-resolver';
+import { blockcodeToColor, resolveTexture } from '@/lib/texture-resolver';
 import SchematicViewer from '@/components/SchematicViewerClient';
 import EditSchematicClient from '@/components/EditSchematicClient';
 import RegenerateThumbnailButton from '@/components/RegenerateThumbnailButton';
@@ -118,20 +118,32 @@ export default async function ViewPage({ params }: PageProps) {
               Materials ({blockcodes.length})
             </h2>
             <div className="space-y-2">
-              {blockcodes.map((code, i) => (
-                <div key={i} className="flex items-center gap-2.5">
-                  <span
-                    className="w-4 h-4 rounded flex-shrink-0 border border-slate-700"
-                    style={{ backgroundColor: blockcodeToColor(code) }}
-                  />
-                  <span
-                    className="text-slate-300 text-sm font-mono truncate"
-                    title={code}
-                  >
-                    {code.replace(/^game:/, '')}
-                  </span>
-                </div>
-              ))}
+              {blockcodes.map((code, i) => {
+                const texUrl = resolveTexture(code);
+                return (
+                  <div key={i} className="flex items-center gap-2.5">
+                    {texUrl ? (
+                      <img
+                        src={texUrl}
+                        alt={code}
+                        className="w-4 h-4 rounded flex-shrink-0 border border-slate-700 object-cover"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                    ) : (
+                      <span
+                        className="w-4 h-4 rounded flex-shrink-0 border border-slate-700"
+                        style={{ backgroundColor: blockcodeToColor(code) }}
+                      />
+                    )}
+                    <span
+                      className="text-slate-300 text-sm font-mono truncate"
+                      title={code}
+                    >
+                      {code.replace(/^game:/, '')}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
