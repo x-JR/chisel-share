@@ -6,6 +6,10 @@ import {
   insertCollection,
   insertCollectionImage,
   setCollectionThumbnailImage,
+  listCollections,
+  countCollections,
+  searchCollections,
+  countCollectionSearchResults,
 } from '@/lib/db';
 import { parseSchematicMeta } from '@/lib/schematic-parser';
 import { generateThumbnail } from '@/lib/thumbnail';
@@ -35,6 +39,35 @@ function thumbsDir(): string {
 function collectionImagesDir(): string {
   const dataDir = process.env.DATA_DIR ?? process.cwd();
   return path.join(dataDir, 'data', 'collection-images');
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+  const sort = searchParams.get('sort') === 'most_liked' ? 'most_liked' : 'newest';
+  const q = searchParams.get('q')?.trim() || null;
+  const limit = 12;
+  const offset = (page - 1) * limit;
+
+  let records, total: number;
+  if (q) {
+    [records, total] = await Promise.all([
+      searchCollections(q, limit, offset, sort),
+      countCollectionSearchResults(q),
+    ]);
+  } else {
+    [records, total] = await Promise.all([
+      listCollections(limit, offset, sort),
+      countCollections(),
+    ]);
+  }
+
+  return NextResponse.json({
+    collections: records,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  });
 }
 
 // Shared upload bucket: 5 uploads (schematics OR collections) per 10 minutes per IP

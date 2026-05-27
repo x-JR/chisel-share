@@ -157,6 +157,7 @@ export interface CollectionRecord {
   created_at: number; // Unix timestamp (seconds)
   like_count?: number; // populated by queries that include a subquery
   thumbnail_image_id?: string | null;
+  schematic_count?: number; // populated by list queries
 }
 
 export interface CollectionImageRecord {
@@ -406,7 +407,8 @@ export async function listCollections(
     : 'c.created_at DESC';
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT c.*,
-       (SELECT COUNT(*) FROM collection_likes WHERE collection_id = c.id) AS like_count
+       (SELECT COUNT(*) FROM collection_likes WHERE collection_id = c.id) AS like_count,
+       (SELECT COUNT(*) FROM schematics WHERE collection_id = c.id) AS schematic_count
      FROM collections c
      ORDER BY ${orderBy}
      LIMIT ? OFFSET ?`,
@@ -436,7 +438,8 @@ export async function searchCollections(
     : 'c.created_at DESC';
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT c.*,
-       (SELECT COUNT(*) FROM collection_likes WHERE collection_id = c.id) AS like_count
+       (SELECT COUNT(*) FROM collection_likes WHERE collection_id = c.id) AS like_count,
+       (SELECT COUNT(*) FROM schematics WHERE collection_id = c.id) AS schematic_count
      FROM collections c
      WHERE c.name LIKE ? OR c.description LIKE ?
      ORDER BY ${orderBy}

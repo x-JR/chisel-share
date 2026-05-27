@@ -59,6 +59,12 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`stone/polishedrockslab/${m[1]}.png`);
   }
 
+  // game:plaster-{variant}
+  {
+    const m = blockcode.match(/^game:plaster-(.+)$/);
+    if (m) return tex(`stone/plaster/${m[1]}.png`);
+  }
+
   // game:drystone-{rock}
   {
     const m = blockcode.match(/^game:drystone-(.+)$/);
@@ -136,6 +142,18 @@ export function resolveTexture(blockcode: string): string | null {
   // game:metalblock-corroded-*  (fallback for other corroded variants)
   if (/^game:metalblock-corroded/.test(blockcode)) {
     return tex('metal/corroded/rusty1.png');
+  }
+
+  // game:metalblock-{age}-riveted-{metal}  (riveted textures have a number suffix)
+  {
+    const m = blockcode.match(/^game:metalblock-[^-]+-riveted-(.+)$/);
+    if (m) return tex(`metal/riveted/${m[1]}1.png`);
+  }
+
+  // game:metalblock-{age}-{variant}-{metal}  (general fallback — no number suffix)
+  {
+    const m = blockcode.match(/^game:metalblock-[^-]+-([^-]+)-(.+)$/);
+    if (m) return tex(`metal/${m[1]}/${m[2]}.png`);
   }
 
   // game:creativeglow-*  — no texture, use emissive colour
