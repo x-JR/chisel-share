@@ -80,6 +80,131 @@ export function decodeVoxelData(b64: string): VoxelCuboid[] {
   return cuboids;
 }
 
+// ---------------------------------------------------------------------------
+// Chisel Wiz JSON browser-side parser
+// ---------------------------------------------------------------------------
+
+/** Decompress a gzip+base64 string in the browser using DecompressionStream. */
+async function gunzipBrowser(b64: string): Promise<Uint8Array> {
+  const compressed = b64ToBytes(b64.replace(/\s/g, ''));
+  // Ensure a clean ArrayBuffer (no SharedArrayBuffer) for DecompressionStream
+  const buf = compressed.buffer.slice(
+    compressed.byteOffset,
+    compressed.byteOffset + compressed.byteLength
+  ) as ArrayBuffer;
+  const ds = new DecompressionStream('gzip');
+  const writer = ds.writable.getWriter();
+  const reader = ds.readable.getReader();
+  writer.write(buf);
+  writer.close();
+
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
+  }
+
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
+/** Greedy meshing: convert a Chisel Wiz voxel bit-grid + material grid to cuboids. */
+function greedyMeshBrowser(
+  voxBuf: Uint8Array,
+  matBuf: Uint8Array
+): VoxelCuboid[] {
+  const getV = (x: number, y: number, z: number) =>
+    ((voxBuf[(x * 256 + y * 16 + z) >> 3] >> ((x * 256 + y * 16 + z) & 7)) & 1) === 1;
+  const getM = (x: number, y: number, z: number) => matBuf[x * 256 + y * 16 + z];
+
+  const visited = new Uint8Array(4096);
+  const cuboids: VoxelCuboid[] = [];
+
+  for (let x = 0; x < 16; x++) {
+    for (let y = 0; y < 16; y++) {
+      for (let z = 0; z < 16; z++) {
+        if (!getV(x, y, z) || visited[x * 256 + y * 16 + z]) continue;
+        const m = getM(x, y, z);
+
+        let x2 = x;
+        while (
+          x2 + 1 < 16 &&
+          getV(x2 + 1, y, z) &&
+          !visited[(x2 + 1) * 256 + y * 16 + z] &&
+          getM(x2 + 1, y, z) === m
+        ) x2++;
+
+        let y2 = y;
+        expandY: while (y2 + 1 < 16) {
+          for (let xi = x; xi <= x2; xi++) {
+            if (
+              !getV(xi, y2 + 1, z) ||
+              visited[xi * 256 + (y2 + 1) * 16 + z] ||
+              getM(xi, y2 + 1, z) !== m
+            ) break expandY;
+          }
+          y2++;
+        }
+
+        let z2 = z;
+        expandZ: while (z2 + 1 < 16) {
+          for (let xi = x; xi <= x2; xi++) {
+            for (let yi = y; yi <= y2; yi++) {
+              if (
+                !getV(xi, yi, z2 + 1) ||
+                visited[xi * 256 + yi * 16 + (z2 + 1)] ||
+                getM(xi, yi, z2 + 1) !== m
+              ) break expandZ;
+            }
+          }
+          z2++;
+        }
+
+        for (let xi = x; xi <= x2; xi++)
+          for (let yi = y; yi <= y2; yi++)
+            for (let zi = z; zi <= z2; zi++)
+              visited[xi * 256 + yi * 16 + zi] = 1;
+
+        cuboids.push({ x1: x, y1: y, z1: z, x2, y2, z2, matIdx: m });
+      }
+    }
+  }
+
+  return cuboids;
+}
+
+/**
+ * Parse a Chisel Wiz JSON catalogue (first design) in the browser.
+ * Returns the same ParsedSchematic shape as parseSchematicXml.
+ */
+export async function parseChiselWizJson(jsonText: string): Promise<ParsedSchematic> {
+  const data = JSON.parse(jsonText);
+  const design = data?.designs?.[0];
+  if (!design?.blueprintData) throw new Error('Invalid Chisel Wiz format');
+
+  const bp = design.blueprintData;
+  const name: string = design.name || bp.name || 'Unnamed';
+  const blockcodes: string[] = bp.materialCodes ?? [];
+
+  const voxBuf = await gunzipBrowser(bp.voxels);
+  const matBuf = await gunzipBrowser(bp.materials);
+  const cuboids = greedyMeshBrowser(voxBuf, matBuf);
+
+  return { name, blockcodes, cuboids };
+}
+
+/** Returns true if the string looks like a Chisel Wiz JSON catalogue. */
+export function isChiselWizContent(content: string): boolean {
+  return content.trimStart().startsWith('{');
+}
+
 /** Parse a PantographData XML string and return the schematic data. */
 export function parseSchematicXml(xmlString: string): ParsedSchematic {
   const parser = new DOMParser();

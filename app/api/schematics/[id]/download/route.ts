@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSchematic, incrementDownloadCount } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { logAction, getClientIp } from '@/lib/logger';
+import { convertXmlToChiselWiz } from '@/lib/chiselwiz-server';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -57,6 +58,18 @@ export async function GET(
 
   // Sanitise the filename for the Content-Disposition header
   const title = (record.display_name || record.name).replace(/[^a-zA-Z0-9 _-]/g, '_');
+
+  const format = request.nextUrl.searchParams.get('format');
+  if (format === 'chiselwiz') {
+    const displayName = record.display_name || record.name;
+    const json = convertXmlToChiselWiz(xmlContent, displayName);
+    return new NextResponse(json, {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${title}.json"`,
+      },
+    });
+  }
 
   return new NextResponse(xmlContent, {
     headers: {

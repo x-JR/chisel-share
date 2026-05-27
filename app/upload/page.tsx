@@ -13,11 +13,18 @@ export default function UploadPage() {
         <UploadForm />
       </div>
 
-      <div className="mt-4 text-center">
-        <p className="text-slate-500 text-sm">
+      <div className="mt-4 flex flex-col sm:flex-row gap-2 text-center justify-center text-sm text-slate-500">
+        <p>
           Uploading multiple related pieces?{' '}
           <Link href="/upload/collection" className="text-amber-500 hover:text-amber-400 transition-colors">
             Upload as a collection →
+          </Link>
+        </p>
+        <span className="hidden sm:inline text-slate-700">|</span>
+        <p>
+          Have a Chisel Wiz catalogue?{' '}
+          <Link href="/upload/chiselwiz" className="text-amber-500 hover:text-amber-400 transition-colors">
+            Merge or share your catalogue →
           </Link>
         </p>
       </div>

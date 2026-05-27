@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "designs": [
+    {
+      "name": "Granite Pillar Bottom CHIZWIZ",
+      "dateAdded": "2026-05-27T18:33:08.0386517+10:00",
+      "blueprintData": {
+        "name": "",
+        "voxels": "H4sIAAAAAAAAA/v///////X/7R+wP2BnwAL+Q+V/yP+Qxyn/////P/Z/7A8wY0KY/L/6f/Uf+FEgO4hElgfZgQ7/IwFC8iA3oEOayctjyuNzHyH/YQkfMCQqfOv/g83GET/2/+3/1+OKXwBfVHizAAIAAA==",
+        "materials": "H4sIAAAAAAAAA+3BAQ0AAADCoPdPbQ8HFAAAANC5AREAHMcAEAAA",
+        "materialCodes": [
+          "game:polishedrockold-full-granite"
+        ]
+      }
+    }
+  ]
+}

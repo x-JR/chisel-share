@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Shared upload bucket: 5 uploads (schematics OR collections) per 10 minutes per IP
-const UPLOAD_LIMIT = 5;
+const UPLOAD_LIMIT = 20;
 const UPLOAD_WINDOW_MS = 10 * 60_000;
 
 export async function POST(request: NextRequest) {

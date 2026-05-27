@@ -2,7 +2,9 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { captureThumbnail } from '@/lib/capture-thumbnail-client';
+import { isChiselWizContent } from '@/lib/voxel-decoder';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
@@ -13,16 +15,32 @@ export default function UploadForm() {
   const [dragging, setDragging] = useState(false);
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
   const [capturingThumb, setCapturingThumb] = useState(false);
+  const [catalogueCount, setCatalogueCount] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const handleFileSelect = useCallback(async (f: File) => {
     setFile(f);
     setError(null);
+    setCatalogueCount(null);
     setThumbnailBlob(null);
     setCapturingThumb(true);
     try {
       const text = await f.text();
+      // Detect multi-design Chisel Wiz catalogues before doing anything else
+      if (isChiselWizContent(text)) {
+        try {
+          const data = JSON.parse(text);
+          const count: number = Array.isArray(data?.designs) ? data.designs.length : 0;
+          if (count > 1) {
+            setCatalogueCount(count);
+            setCapturingThumb(false);
+            return;
+          }
+        } catch {
+          // not valid JSON — let the server reject it
+        }
+      }
       const blob = await captureThumbnail(text);
       setThumbnailBlob(blob);
     } catch {
@@ -100,6 +118,7 @@ export default function UploadForm() {
         <input
           ref={fileInputRef}
           type="file"
+          accept=".xml,.json"
           className="hidden"
           onChange={(e) => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]); }}
         />
@@ -118,14 +137,43 @@ export default function UploadForm() {
         ) : (
           <div>
             <div className="text-slate-400 text-4xl mb-3">📦</div>
-            <p className="text-slate-300 font-medium">Drop your QP Chisel schematic here</p>
-            <p className="text-slate-500 text-sm mt-1">or click to browse &mdash; .xml or extension-less QP Chisel files</p>
+            <p className="text-slate-300 font-medium">Drop your schematic here</p>
+            <p className="text-slate-500 text-sm mt-1">or click to browse &mdash; QP Chisel (.xml) or Chisel Wiz (.json)</p>
           </div>
         )}
       </div>
 
+      {/* Catalogue warning */}
+      {catalogueCount !== null && (
+        <div className="bg-amber-950 border border-amber-700 rounded-lg px-4 py-4 space-y-3">
+          <p className="text-amber-300 text-sm font-medium">
+            This file contains {catalogueCount} designs — it looks like a Chisel Wiz catalogue.
+          </p>
+          <p className="text-amber-400/80 text-sm">
+            The <strong className="text-amber-300">Catalogue Tool</strong> can handle multi-design
+            files: merge them with your existing catalogue, add designs from the gallery, or upload
+            them all to the community at once.
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Link
+              href="/upload/chiselwiz"
+              className="bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              Open Catalogue Tool →
+            </Link>
+            <button
+              type="button"
+              onClick={() => setCatalogueCount(null)}
+              className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm px-4 py-2 rounded-lg transition-colors"
+            >
+              Upload first design only
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Display name */}
-      <div>
+      <div className={catalogueCount !== null ? 'hidden' : ''}>
         <label className="block text-slate-300 text-sm font-medium mb-1.5">
           Display Name <span className="text-red-400">*</span>
         </label>
@@ -141,7 +189,7 @@ export default function UploadForm() {
       </div>
 
       {/* Description */}
-      <div>
+      <div className={catalogueCount !== null ? 'hidden' : ''}>
         <label className="block text-slate-300 text-sm font-medium mb-1.5">
           Description <span className="text-slate-500 font-normal">(optional)</span>
         </label>
@@ -161,13 +209,15 @@ export default function UploadForm() {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={uploading || capturingThumb || !file}
-        className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors"
-      >
-        {uploading ? 'Uploading…' : capturingThumb ? 'Preparing…' : 'Upload Schematic'}
-      </button>
+      {catalogueCount === null && (
+        <button
+          type="submit"
+          disabled={uploading || capturingThumb || !file}
+          className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors"
+        >
+          {uploading ? 'Uploading…' : capturingThumb ? 'Preparing…' : 'Upload Schematic'}
+        </button>
+      )}
     </form>
   );
 }

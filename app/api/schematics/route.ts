@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { listSchematics, insertSchematic, countSchematics } from '@/lib/db';
 import { parseSchematicMeta } from '@/lib/schematic-parser';
+import { isChiselWizJson, convertChiselWizToXml } from '@/lib/chiselwiz-server';
 import { generateThumbnail } from '@/lib/thumbnail';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { logAction, getClientIp } from '@/lib/logger';
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
 }
 
 // 5 uploads per 10 minutes per IP
-const UPLOAD_LIMIT = 5;
+const UPLOAD_LIMIT = 20;
 const UPLOAD_WINDOW_MS = 10 * 60_000;
 
 export async function POST(request: NextRequest) {
@@ -86,20 +87,37 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const xmlContent = await file.text();
+  const rawContent = await file.text();
 
-  // Basic validation: must be a PantographData XML
-  if (
-    !xmlContent.includes('<PantographData') &&
-    !xmlContent.includes('<pantographdata')
-  ) {
-    return NextResponse.json(
-      { error: 'Not a valid QP Chisel schematic file' },
-      { status: 400 }
-    );
+  // Detect format and normalise to PantographData XML for storage
+  let xmlContent: string;
+  let meta: ReturnType<typeof parseSchematicMeta>;
+
+  if (isChiselWizJson(rawContent)) {
+    try {
+      const result = convertChiselWizToXml(rawContent);
+      xmlContent = result.xml;
+      meta = result.meta;
+    } catch {
+      return NextResponse.json(
+        { error: 'Not a valid Chisel Wiz schematic file' },
+        { status: 400 }
+      );
+    }
+  } else {
+    // QP Chisel XML path
+    if (
+      !rawContent.includes('<PantographData') &&
+      !rawContent.includes('<pantographdata')
+    ) {
+      return NextResponse.json(
+        { error: 'Not a valid QP Chisel or Chisel Wiz schematic file' },
+        { status: 400 }
+      );
+    }
+    xmlContent = rawContent;
+    meta = parseSchematicMeta(xmlContent);
   }
-
-  const meta = parseSchematicMeta(xmlContent);
 
   if (!meta.blockcodes.length) {
     return NextResponse.json(

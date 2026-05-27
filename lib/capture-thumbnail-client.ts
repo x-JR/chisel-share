@@ -1,20 +1,22 @@
 'use client';
 
 /**
- * Renders a QP Chisel schematic into an offscreen Three.js canvas and returns
- * the result as a PNG Blob.  Call this only in browser contexts.
+ * Renders a QP Chisel or Chisel Wiz schematic into an offscreen Three.js canvas and
+ * returns the result as a PNG Blob.  Call this only in browser contexts.
  */
 
 import * as THREE from 'three';
-import { parseSchematicXml } from './voxel-decoder';
+import { parseSchematicXml, parseChiselWizJson, isChiselWizContent } from './voxel-decoder';
 import { resolveTexture } from './texture-resolver';
 
 const THUMB_W = 512;
 const THUMB_H = 384;
 
-export async function captureThumbnail(xmlContent: string): Promise<Blob | null> {
+export async function captureThumbnail(fileContent: string): Promise<Blob | null> {
   try {
-    const schematic = parseSchematicXml(xmlContent);
+    const schematic = isChiselWizContent(fileContent)
+      ? await parseChiselWizJson(fileContent)
+      : parseSchematicXml(fileContent);
     if (!schematic.cuboids.length) return null;
 
     // Compute bounding box in voxel space
