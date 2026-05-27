@@ -181,7 +181,7 @@ export default function EditSchematicClient({
         />
         <DownloadButton
           href={`/api/schematics/${id}/download?format=chiselwiz`}
-          filename={`${title.replace(/[^a-zA-Z0-9 _-]/g, '_')}.json`}
+          filename="chiselwiz-catalogue.json"
           label="⬇ Download (Chisel Wiz .json)"
           className="block w-full text-center bg-slate-700 hover:bg-slate-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition-colors"
         />

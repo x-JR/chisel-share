@@ -40,7 +40,7 @@ export default function CollectionDownloadButton({
       format === 'chiselwiz'
         ? `/api/collections/${collectionId}/download?format=chiselwiz`
         : `/api/collections/${collectionId}/download`;
-    const filename = format === 'chiselwiz' ? `${safeFilename}.json` : `${safeFilename}.zip`;
+    const filename = format === 'chiselwiz' ? 'chiselwiz-catalogue.json' : `${safeFilename}.zip`;
     try {
       const res = await fetch(url);
       if (res.status === 429) {

@@ -66,7 +66,7 @@ export async function GET(
     return new NextResponse(json, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${title}.json"`,
+        'Content-Disposition': `attachment; filename="chiselwiz-catalogue.json"`,
       },
     });
   }

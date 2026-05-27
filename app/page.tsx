@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import {
   listSchematics,
   countSchematics,
+  countAllSchematics,
   searchSchematics,
   countSearchResults,
   listCollections,
@@ -73,6 +74,8 @@ export default async function GalleryPage({ searchParams }: PageProps) {
       : await Promise.all([listSchematics(limit, offset, sort), countSchematics()])
     : [[], 0];
 
+  const totalAllSchematics = !searchQuery ? await countAllSchematics() : 0;
+
   // Collections: paginated when in collections-only mode, otherwise first 12
   const collectionLimit = showCollections ? (view === 'collections' ? limit : 12) : 0;
   const collectionOffset = view === 'collections' ? offset : 0;
@@ -117,8 +120,8 @@ export default async function GalleryPage({ searchParams }: PageProps) {
         <h1 className="text-3xl font-bold text-slate-100">Gallery</h1>
         <p className="text-slate-400 mt-1">
           Browse and share Vintage Story chisel schematics
-          {total > 0 && !searchQuery && view !== 'collections' && (
-            <span className="ml-2 text-slate-500">— {total} schematic{total !== 1 ? 's' : ''}</span>
+          {totalAllSchematics > 0 && !searchQuery && view !== 'collections' && (
+            <span className="ml-2 text-slate-500">— {totalAllSchematics} schematic{totalAllSchematics !== 1 ? 's' : ''}</span>
           )}
         </p>
       </div>

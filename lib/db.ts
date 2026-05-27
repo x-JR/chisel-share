@@ -200,6 +200,14 @@ export async function countSchematics(): Promise<number> {
   return (rows[0] as { count: number }).count;
 }
 
+export async function countAllSchematics(): Promise<number> {
+  const pool = await db();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT COUNT(*) AS count FROM schematics'
+  );
+  return (rows[0] as { count: number }).count;
+}
+
 export async function searchSchematics(
   query: string,
   limit = 24,
