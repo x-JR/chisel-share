@@ -327,10 +327,10 @@ export function convertChiselWizToXml(jsonText: string): {
  * Convert a stored PantographData XML to a Chisel Wiz JSON catalogue string.
  * Used when the user requests download in Chisel Wiz format.
  */
-export function convertXmlToChiselWiz(
+export function convertXmlToChiselWizDesign(
   xmlContent: string,
   displayName?: string
-): string {
+): ChiselWizDesign {
   const name = displayName || extractXmlField(xmlContent, 'name') || 'Unnamed';
   const blockcodes = extractXmlStrings(xmlContent, 'blockcodes');
   const voxeldataB64 = extractXmlField(xmlContent, 'voxeldata') ?? '';
@@ -341,21 +341,25 @@ export function convertXmlToChiselWiz(
   const compressedVox = zlib.gzipSync(voxBuf).toString('base64');
   const compressedMat = zlib.gzipSync(matBuf).toString('base64');
 
+  return {
+    name,
+    dateAdded: new Date().toISOString(),
+    blueprintData: {
+      name: '',
+      voxels: compressedVox,
+      materials: compressedMat,
+      materialCodes: blockcodes,
+    },
+  };
+}
+
+export function convertXmlToChiselWiz(
+  xmlContent: string,
+  displayName?: string
+): string {
   const catalogue: ChiselWizFile = {
     version: 1,
-    designs: [
-      {
-        name,
-        dateAdded: new Date().toISOString(),
-        blueprintData: {
-          name: '',
-          voxels: compressedVox,
-          materials: compressedMat,
-          materialCodes: blockcodes,
-        },
-      },
-    ],
+    designs: [convertXmlToChiselWizDesign(xmlContent, displayName)],
   };
-
   return JSON.stringify(catalogue, null, 2);
 }

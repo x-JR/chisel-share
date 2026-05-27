@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { captureThumbnail } from '@/lib/capture-thumbnail-client';
 import LikeButton from './LikeButton';
 import DownloadButton from './DownloadButton';
+import CollectionDownloadButton from './CollectionDownloadButton';
 import DeleteCollectionButton from './DeleteCollectionButton';
 import SchematicCard from './SchematicCard';
 import RegenerateThumbnailButton from './RegenerateThumbnailButton';
@@ -445,9 +446,9 @@ export default function EditCollectionClient({
               >
                 ✏ Edit Collection
               </button>
-              <DownloadButton
-                href={`/api/collections/${collection.id}/download`}
-                filename={`${collection.name.replace(/[^a-zA-Z0-9 _-]/g, '_')}.zip`}
+              <CollectionDownloadButton
+                collectionId={collection.id}
+                collectionName={collection.name}
                 label="⬇ Download All"
                 className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300"
               />
@@ -457,9 +458,9 @@ export default function EditCollectionClient({
           ) : (
             <div className="shrink-0 flex gap-2 w-full sm:w-96">
               <div className="flex-1">
-                <DownloadButton
-                  href={`/api/collections/${collection.id}/download`}
-                  filename={`${collection.name.replace(/[^a-zA-Z0-9 _-]/g, '_')}.zip`}
+                <CollectionDownloadButton
+                  collectionId={collection.id}
+                  collectionName={collection.name}
                   label="⬇ Download All"
                   className="flex items-center justify-center gap-2 w-full h-full py-2.5 rounded-lg border font-medium text-sm whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300"
                 />

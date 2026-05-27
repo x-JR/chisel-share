@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, getCollectionSchematics, incrementDownloadCount } from '@/lib/db';
 import { logAction } from '@/lib/logger';
+import { convertXmlToChiselWizDesign } from '@/lib/chiselwiz-server';
 import path from 'path';
 import fs from 'fs/promises';
 import JSZip from 'jszip';
@@ -27,8 +28,35 @@ export async function GET(
     return new NextResponse('Collection is empty', { status: 404 });
   }
 
-  const zip = new JSZip();
   const dir = schematicsDir();
+  const collectionTitle = collection.name.replace(/[^a-zA-Z0-9 _-]/g, '_');
+
+  const format = request.nextUrl.searchParams.get('format');
+  if (format === 'chiselwiz') {
+    const designs = [];
+    for (const s of schematics) {
+      const content = await fs.readFile(path.join(dir, s.filename), 'utf-8').catch(() => null);
+      if (content === null) continue;
+      designs.push(convertXmlToChiselWizDesign(content, s.display_name || s.name));
+      incrementDownloadCount(s.id).catch(() => {});
+    }
+    const catalogue = JSON.stringify({ version: 1, designs }, null, 2);
+    logAction({
+      request,
+      action: 'download',
+      resourceType: 'collection',
+      resourceId: id,
+      details: { schematicCount: schematics.length, format: 'chiselwiz' },
+    });
+    return new NextResponse(catalogue, {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${collectionTitle}.json"`,
+      },
+    });
+  }
+
+  const zip = new JSZip();
 
   for (let i = 0; i < schematics.length; i++) {
     const s = schematics[i];
@@ -44,8 +72,6 @@ export async function GET(
   }
 
   const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-
-  const collectionTitle = collection.name.replace(/[^a-zA-Z0-9 _-]/g, '_');
 
   // Fire-and-forget download log
   logAction({
