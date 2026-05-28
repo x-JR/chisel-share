@@ -89,6 +89,12 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`stone/polishedrock/${m[1]}.png`);
   }
 
+  // game:debarkedlog-{wood}-{orientation}  (ns/ew = no rotation, ud = 90° — handled by resolveTextureRotation)
+  {
+    const m = blockcode.match(/^game:debarkedlog-([^-]+)-(?:ns|ew|ud)$/);
+    if (m) return tex(`wood/debarked/${m[1]}.png`);
+  }
+
   // game:planks-veryaged-*  (must be checked before generic planks rule)
   if (/^game:planks-veryaged/.test(blockcode)) {
     return tex('wood/planks/aged/veryaged1.png');
@@ -168,6 +174,15 @@ export function resolveTexture(blockcode: string): string | null {
   }
 
   return null;
+}
+
+/**
+ * Returns the Three.js texture rotation (in radians) for a given block code.
+ * Blocks with a `-ud` (up-down / vertical) orientation need a 90° rotation so
+ * the wood grain runs along the log axis.
+ */
+export function resolveTextureRotation(blockcode: string): number {
+  return blockcode.endsWith('-ud') ? Math.PI / 2 : 0;
 }
 
 /**
