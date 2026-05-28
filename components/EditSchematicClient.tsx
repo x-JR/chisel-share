@@ -9,6 +9,7 @@ interface Props {
   id: string;
   initialDisplayName: string;
   initialDescription: string | null;
+  initialAuthorName: string | null;
   schematicName: string;
   cuboidCount: number;
   downloadCount: number;
@@ -21,6 +22,7 @@ export default function EditSchematicClient({
   id,
   initialDisplayName,
   initialDescription,
+  initialAuthorName,
   schematicName,
   cuboidCount,
   downloadCount,
@@ -31,6 +33,7 @@ export default function EditSchematicClient({
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [description, setDescription] = useState(initialDescription ?? '');
+  const [authorName, setAuthorName] = useState(initialAuthorName ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +51,7 @@ export default function EditSchematicClient({
         body: JSON.stringify({
           display_name: displayName.trim(),
           description: description.trim() || null,
+          author_name: authorName.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -65,6 +69,7 @@ export default function EditSchematicClient({
   function handleCancel() {
     setDisplayName(initialDisplayName);
     setDescription(initialDescription ?? '');
+    setAuthorName(initialAuthorName ?? '');
     setEditing(false);
     setError(null);
   }
@@ -101,6 +106,19 @@ export default function EditSchematicClient({
                 rows={3}
                 placeholder="Describe your schematic…"
                 className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 transition-colors resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-400 text-xs font-medium mb-1">
+                Author
+              </label>
+              <input
+                type="text"
+                value={authorName}
+                onChange={(e) => setAuthorName(e.target.value)}
+                maxLength={100}
+                placeholder="Your name or alias"
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
             {error && (
@@ -140,6 +158,9 @@ export default function EditSchematicClient({
             </div>
             {displayName && displayName !== schematicName && (
               <p className="text-slate-500 text-sm mt-1 break-words">{schematicName}</p>
+            )}
+            {authorName && (
+              <p className="text-slate-400 text-sm mt-1">by {authorName}</p>
             )}
             {description && (
               <p className="text-slate-300 text-sm mt-3 leading-relaxed">{description}</p>

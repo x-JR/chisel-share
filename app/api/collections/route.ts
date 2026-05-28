@@ -107,6 +107,8 @@ export async function POST(request: NextRequest) {
   }
   const collectionDescription =
     (formData.get('description') as string | null)?.trim().slice(0, 1000) || null;
+  const collectionAuthorName =
+    (formData.get('author_name') as string | null)?.trim().slice(0, 100) || null;
 
   const countRaw = parseInt(formData.get('count') as string ?? '0', 10);
   if (!countRaw || countRaw < 1 || countRaw > MAX_FILES) {
@@ -222,6 +224,7 @@ export async function POST(request: NextRequest) {
     id: collectionId,
     name: collectionName,
     description: collectionDescription,
+    author_name: collectionAuthorName,
     uploader_token: uploaderToken,
     created_at: now,
   });

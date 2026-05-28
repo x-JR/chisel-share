@@ -17,6 +17,7 @@ export interface CollectionData {
   id: string;
   name: string;
   description: string | null;
+  author_name: string | null;
   created_at: number;
 }
 
@@ -104,6 +105,9 @@ export default function EditCollectionClient({
   const [collectionName, setCollectionName] = useState(collection.name);
   const [collectionDescription, setCollectionDescription] = useState(
     collection.description ?? ''
+  );
+  const [collectionAuthorName, setCollectionAuthorName] = useState(
+    collection.author_name ?? ''
   );
   const [parts, setParts] = useState<EditPart[]>(() =>
     schematics.map((s) => ({
@@ -270,6 +274,8 @@ export default function EditCollectionClient({
       fd.append('name', collectionName.trim());
       if (collectionDescription.trim())
         fd.append('description', collectionDescription.trim());
+      if (collectionAuthorName.trim())
+        fd.append('author_name', collectionAuthorName.trim());
 
       const existingOrder = parts
         .filter((p): p is ExistingPart => p.kind === 'existing')
@@ -338,6 +344,7 @@ export default function EditCollectionClient({
   function handleCancel() {
     setCollectionName(collection.name);
     setCollectionDescription(collection.description ?? '');
+    setCollectionAuthorName(collection.author_name ?? '');
     setParts(
       schematics.map((s) => ({
         kind: 'existing' as const,
@@ -427,6 +434,9 @@ export default function EditCollectionClient({
               <p className="text-slate-300 text-sm mt-3 leading-relaxed max-w-2xl">
                 {collection.description}
               </p>
+            )}
+            {collection.author_name && (
+              <p className="text-slate-400 text-sm mt-1">by {collection.author_name}</p>
             )}
             <p className="text-slate-500 text-sm mt-2">
               Uploaded{' '}
@@ -552,6 +562,19 @@ export default function EditCollectionClient({
               rows={2}
               placeholder="Describe the collection…"
               className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
+            />
+          </div>
+          <div>
+            <label className="block text-slate-400 text-xs font-medium mb-1">
+              Author
+            </label>
+            <input
+              type="text"
+              value={collectionAuthorName}
+              onChange={(e) => setCollectionAuthorName(e.target.value)}
+              maxLength={100}
+              placeholder="Your name or alias"
+              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
         </div>

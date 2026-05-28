@@ -33,6 +33,7 @@ function getPool(): mysql.Pool {
           name            TEXT         NOT NULL,
           display_name    TEXT         DEFAULT NULL,
           description     TEXT         DEFAULT NULL,
+          author_name     TEXT         DEFAULT NULL,
           filename        VARCHAR(255) NOT NULL,
           blockcodes      MEDIUMTEXT   NOT NULL,
           cuboid_count    INT          NOT NULL DEFAULT 0,
@@ -49,13 +50,15 @@ function getPool(): mysql.Pool {
         ALTER TABLE schematics
           ADD COLUMN IF NOT EXISTS download_count   INT NOT NULL DEFAULT 0,
           ADD COLUMN IF NOT EXISTS collection_id    VARCHAR(36) DEFAULT NULL,
-          ADD COLUMN IF NOT EXISTS collection_order INT NOT NULL DEFAULT 0
+          ADD COLUMN IF NOT EXISTS collection_order INT NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS author_name      TEXT DEFAULT NULL
       `).catch(() => { /* already present */ });
       await pool.execute(`
         CREATE TABLE IF NOT EXISTS collections (
           id             VARCHAR(36)  NOT NULL,
           name           TEXT         NOT NULL,
           description    TEXT         DEFAULT NULL,
+          author_name    TEXT         DEFAULT NULL,
           uploader_token VARCHAR(36)  DEFAULT NULL,
           created_at     INT          NOT NULL,
           PRIMARY KEY (id)
@@ -90,7 +93,8 @@ function getPool(): mysql.Pool {
       `);
       await pool.execute(`
         ALTER TABLE collections
-          ADD COLUMN IF NOT EXISTS thumbnail_image_id VARCHAR(36) NULL
+          ADD COLUMN IF NOT EXISTS thumbnail_image_id VARCHAR(36) NULL,
+          ADD COLUMN IF NOT EXISTS author_name        TEXT DEFAULT NULL
       `).catch(() => { /* already present */ });
       await pool.execute(`
         CREATE TABLE IF NOT EXISTS collection_reports (
@@ -146,6 +150,7 @@ export interface SchematicRecord {
   download_count: number;
   collection_id: string | null;
   collection_order: number;
+  author_name?: string | null;
   like_count?: number; // populated by queries that include a subquery
 }
 
@@ -155,6 +160,7 @@ export interface CollectionRecord {
   description: string | null;
   uploader_token: string | null;
   created_at: number; // Unix timestamp (seconds)
+  author_name?: string | null;
   like_count?: number; // populated by queries that include a subquery
   thumbnail_image_id?: string | null;
   schematic_count?: number; // populated by list queries
@@ -275,14 +281,15 @@ export async function insertSchematic(record: SchematicRecord): Promise<void> {
   const pool = await db();
   await pool.execute(
     `INSERT INTO schematics
-       (id, name, display_name, description, filename, blockcodes, cuboid_count,
+       (id, name, display_name, description, author_name, filename, blockcodes, cuboid_count,
         uploaded_at, uploader_token, download_count, collection_id, collection_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.id,
       record.name,
       record.display_name,
       record.description,
+      record.author_name ?? null,
       record.filename,
       record.blockcodes,
       record.cuboid_count,
@@ -302,12 +309,12 @@ export async function deleteSchematic(id: string): Promise<void> {
 
 export async function updateSchematicMeta(
   id: string,
-  fields: { display_name: string; description: string | null }
+  fields: { display_name: string; description: string | null; author_name: string | null }
 ): Promise<void> {
   const pool = await db();
   await pool.execute(
-    'UPDATE schematics SET display_name = ?, description = ? WHERE id = ?',
-    [fields.display_name, fields.description, id]
+    'UPDATE schematics SET display_name = ?, description = ?, author_name = ? WHERE id = ?',
+    [fields.display_name, fields.description, fields.author_name, id]
   );
 }
 
@@ -375,9 +382,9 @@ export async function toggleLike(schematicId: string, voterToken: string): Promi
 export async function insertCollection(record: CollectionRecord): Promise<void> {
   const pool = await db();
   await pool.execute(
-    `INSERT INTO collections (id, name, description, uploader_token, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [record.id, record.name, record.description, record.uploader_token, record.created_at]
+    `INSERT INTO collections (id, name, description, author_name, uploader_token, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [record.id, record.name, record.description, record.author_name ?? null, record.uploader_token, record.created_at]
   );
 }
 
@@ -474,12 +481,12 @@ export async function deleteCollection(id: string): Promise<void> {
 
 export async function updateCollectionMeta(
   id: string,
-  fields: { name: string; description: string | null }
+  fields: { name: string; description: string | null; author_name: string | null }
 ): Promise<void> {
   const pool = await db();
   await pool.execute(
-    'UPDATE collections SET name = ?, description = ? WHERE id = ?',
-    [fields.name, fields.description, id]
+    'UPDATE collections SET name = ?, description = ?, author_name = ? WHERE id = ?',
+    [fields.name, fields.description, fields.author_name, id]
   );
 }
 

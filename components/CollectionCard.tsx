@@ -7,6 +7,7 @@ interface Props {
   id: string;
   name: string;
   description: string | null;
+  authorName?: string | null;
   createdAt: number;
   memberCount: number;
   firstSchematicId: string | null;
@@ -26,6 +27,7 @@ export default function CollectionCard({
   id,
   name,
   description,
+  authorName,
   createdAt,
   memberCount,
   firstSchematicId,
@@ -65,6 +67,9 @@ export default function CollectionCard({
 
           {description && (
             <p className="text-slate-400 text-xs line-clamp-2">{description}</p>
+          )}
+          {authorName && (
+            <p className="text-slate-500 text-xs truncate">by {authorName}</p>
           )}
 
           <div className="mt-auto flex items-center justify-between text-slate-500 text-xs">

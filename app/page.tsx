@@ -171,6 +171,7 @@ export default async function GalleryPage({ searchParams }: PageProps) {
                 id={c.id}
                 name={c.name}
                 description={c.description}
+                authorName={c.author_name ?? null}
                 createdAt={c.created_at}
                 memberCount={collectionMemberCounts[c.id] ?? 0}
                 firstSchematicId={collectionFirstIds[c.id]}
@@ -220,6 +221,7 @@ export default async function GalleryPage({ searchParams }: PageProps) {
                     id={s.id}
                     name={s.name}
                     displayName={s.display_name}
+                    authorName={s.author_name ?? null}
                     uploadedAt={s.uploaded_at}
                     downloadCount={s.download_count}
                     likeCount={s.like_count ?? 0}

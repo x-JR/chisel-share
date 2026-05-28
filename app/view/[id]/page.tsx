@@ -69,10 +69,10 @@ export default async function ViewPage({ params }: PageProps) {
       {/* Breadcrumb */}
       <div className="mb-6">
         <Link
-          href="/"
+          href={record.collection_id ? `/view/collection/${record.collection_id}` : '/'}
           className="text-slate-500 hover:text-slate-300 text-sm transition-colors"
         >
-          ← Back to gallery
+          {record.collection_id ? '← Back to collection' : '← Back to gallery'}
         </Link>
       </div>
 
@@ -96,6 +96,7 @@ export default async function ViewPage({ params }: PageProps) {
             id={record.id}
             initialDisplayName={record.display_name ?? record.name}
             initialDescription={record.description}
+            initialAuthorName={record.author_name ?? null}
             schematicName={record.name}
             cuboidCount={record.cuboid_count}
             downloadCount={record.download_count}
