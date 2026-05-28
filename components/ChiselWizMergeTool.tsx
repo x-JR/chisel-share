@@ -26,7 +26,6 @@ interface UploadSelection {
 interface SiteResult {
   id: number;
   display_name: string;
-  thumbnail_path: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -422,14 +421,13 @@ export default function ChiselWizMergeTool() {
                   key={r.id}
                   className="flex items-center gap-3 bg-slate-800 rounded-lg px-3 py-2"
                 >
-                  {r.thumbnail_path && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={`/api/schematics/${r.id}/thumbnail`}
-                      alt=""
-                      className="w-10 h-10 rounded object-cover bg-slate-700 flex-shrink-0"
-                    />
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/schematics/${r.id}/thumb`}
+                    alt=""
+                    className="w-10 h-10 rounded object-cover bg-slate-700 flex-shrink-0"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
                   <span className="text-slate-200 text-sm flex-1 truncate">{r.display_name}</span>
                   <button
                     type="button"

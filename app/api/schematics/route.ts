@@ -133,6 +133,8 @@ export async function POST(request: NextRequest) {
   }
   const description =
     (formData.get('description') as string | null)?.trim().slice(0, 1000) || null;
+  const authorName =
+    (formData.get('author_name') as string | null)?.trim().slice(0, 100) || null;
 
   const cookieStore = await cookies();
   let uploaderToken = cookieStore.get('uploader_token')?.value;
@@ -152,6 +154,7 @@ export async function POST(request: NextRequest) {
     name: meta.name,
     display_name: displayName,
     description,
+    author_name: authorName,
     filename,
     blockcodes: JSON.stringify(meta.blockcodes),
     cuboid_count: meta.cuboidCount,

@@ -106,7 +106,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  let body: { display_name?: unknown; description?: unknown };
+  let body: { display_name?: unknown; description?: unknown; author_name?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -121,12 +121,16 @@ export async function PATCH(
     typeof body.description === 'string'
       ? body.description.trim().slice(0, 1000) || null
       : record.description;
+  const author_name =
+    typeof body.author_name === 'string'
+      ? body.author_name.trim().slice(0, 100) || null
+      : record.author_name ?? null;
 
   if (!display_name) {
     return NextResponse.json({ error: 'Display name is required' }, { status: 400 });
   }
 
-  await updateSchematicMeta(id, { display_name, description });
+  await updateSchematicMeta(id, { display_name, description, author_name });
 
   logAction({
     request,

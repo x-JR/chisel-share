@@ -5,6 +5,7 @@ interface Props {
   id: string;
   name: string;
   displayName: string | null;
+  authorName?: string | null;
   uploadedAt: number;
   downloadCount?: number;
   likeCount?: number;
@@ -22,6 +23,7 @@ export default function SchematicCard({
   id,
   name,
   displayName,
+  authorName,
   uploadedAt,
   downloadCount = 0,
   likeCount = 0,
@@ -42,6 +44,9 @@ export default function SchematicCard({
           </h3>
           {displayName && (
             <p className="text-slate-500 text-xs mt-0.5 truncate">{name}</p>
+          )}
+          {authorName && (
+            <p className="text-slate-500 text-xs mt-0.5 truncate">by {authorName}</p>
           )}
         </div>
 

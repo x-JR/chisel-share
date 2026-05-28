@@ -10,6 +10,7 @@ export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [description, setDescription] = useState('');
+  const [authorName, setAuthorName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -77,6 +78,7 @@ export default function UploadForm() {
       formData.append('file', file);
       formData.append('display_name', displayName.trim());
       if (description.trim()) formData.append('description', description.trim());
+      if (authorName.trim()) formData.append('author_name', authorName.trim());
       if (thumbnailBlob) formData.append('thumbnail', thumbnailBlob, 'thumbnail.png');
 
       const res = await fetch('/api/schematics', {
@@ -200,6 +202,21 @@ export default function UploadForm() {
           maxLength={500}
           rows={3}
           className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
+        />
+      </div>
+
+      {/* Author */}
+      <div className={catalogueCount !== null ? 'hidden' : ''}>
+        <label className="block text-slate-300 text-sm font-medium mb-1.5">
+          Author <span className="text-slate-500 font-normal">(optional)</span>
+        </label>
+        <input
+          type="text"
+          value={authorName}
+          onChange={(e) => setAuthorName(e.target.value)}
+          placeholder="Your name or alias"
+          maxLength={100}
+          className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
         />
       </div>
 

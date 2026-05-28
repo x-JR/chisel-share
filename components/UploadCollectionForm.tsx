@@ -25,6 +25,7 @@ export default function UploadCollectionForm() {
   const [parts, setParts] = useState<FilePart[]>([]);
   const [collectionName, setCollectionName] = useState('');
   const [collectionDescription, setCollectionDescription] = useState('');
+  const [collectionAuthorName, setCollectionAuthorName] = useState('');
   const [images, setImages] = useState<ImageFile[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -168,6 +169,8 @@ export default function UploadCollectionForm() {
       formData.append('name', collectionName.trim());
       if (collectionDescription.trim())
         formData.append('description', collectionDescription.trim());
+      if (collectionAuthorName.trim())
+        formData.append('author_name', collectionAuthorName.trim());
       formData.append('count', String(parts.length));
 
       for (let i = 0; i < parts.length; i++) {
@@ -230,6 +233,19 @@ export default function UploadCollectionForm() {
             rows={2}
             maxLength={1000}
             className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
+          />
+        </div>
+        <div>
+          <label className="block text-slate-300 text-sm font-medium mb-1.5">
+            Author <span className="text-slate-500 font-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={collectionAuthorName}
+            onChange={(e) => setCollectionAuthorName(e.target.value)}
+            placeholder="Your name or alias"
+            maxLength={100}
+            className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
           />
         </div>
       </div>

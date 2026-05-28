@@ -148,6 +148,8 @@ export async function PATCH(
   }
   const description =
     (formData.get('description') as string | null)?.trim().slice(0, 1000) || null;
+  const author_name =
+    (formData.get('author_name') as string | null)?.trim().slice(0, 100) || null;
 
   // `order` is a JSON array of existing schematic IDs in the desired final order.
   // Any existing schematic not listed will be deleted.
@@ -195,7 +197,11 @@ export async function PATCH(
         typeof rawDesc === 'string'
           ? rawDesc.trim().slice(0, 1000) || null
           : original.description;
-      await updateSchematicMeta(sid, { display_name, description: partDescription });
+      await updateSchematicMeta(sid, {
+        display_name,
+        description: partDescription,
+        author_name: original.author_name ?? null,
+      });
     }
   }
 
@@ -359,7 +365,7 @@ export async function PATCH(
   // ── Collection metadata ─────────────────────────────────────────────────────
 
   // Update collection metadata.
-  await updateCollectionMeta(id, { name, description });
+  await updateCollectionMeta(id, { name, description, author_name });
 
   logAction({
     request,

@@ -70,6 +70,7 @@ export default async function CollectionViewPage({ params }: PageProps) {
           id: collection.id,
           name: collection.name,
           description: collection.description,
+          author_name: collection.author_name ?? null,
           created_at: collection.created_at,
         }}
         schematics={schematics.map((s) => ({

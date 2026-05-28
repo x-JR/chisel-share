@@ -64,6 +64,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Right: actions */}
             <div className="flex items-center gap-3">
               <a
+                href="/upload/chiselwiz"
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-4 py-2 rounded-lg border border-slate-700 transition-colors"
+              >
+                ChisWiz Tool
+              </a>
+              <a
                 href="/upload"
                 className="bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
               >
@@ -71,7 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </a>
               <a
                 href="/upload/collection"
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-4 py-2 rounded-lg border border-slate-700 transition-colors"
+                className="bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
               >
                 + Collection
               </a>

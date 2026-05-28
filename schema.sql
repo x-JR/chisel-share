@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS `schematics` (
   `name`            TEXT          NOT NULL,
   `display_name`    TEXT          DEFAULT NULL,
   `description`     TEXT          DEFAULT NULL,
+  `author_name`     TEXT          DEFAULT NULL COMMENT 'Optional display author name',
   `filename`        VARCHAR(255)  NOT NULL,
   `blockcodes`      MEDIUMTEXT    NOT NULL  COMMENT 'JSON-encoded array of VS block codes',
   `cuboid_count`    INT           NOT NULL  DEFAULT 0,
@@ -26,11 +27,13 @@ CREATE TABLE IF NOT EXISTS `schematics` (
 -- ALTER TABLE `schematics` ADD COLUMN IF NOT EXISTS `download_count`  INT NOT NULL DEFAULT 0;
 -- ALTER TABLE `schematics` ADD COLUMN IF NOT EXISTS `collection_id`   VARCHAR(36) DEFAULT NULL;
 -- ALTER TABLE `schematics` ADD COLUMN IF NOT EXISTS `collection_order` INT NOT NULL DEFAULT 0;
+-- ALTER TABLE `schematics` ADD COLUMN IF NOT EXISTS `author_name`     TEXT DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS `collections` (
   `id`              VARCHAR(36)   NOT NULL,
   `name`            TEXT          NOT NULL,
   `description`     TEXT          DEFAULT NULL,
+  `author_name`     TEXT          DEFAULT NULL COMMENT 'Optional display author name',
   `uploader_token`  VARCHAR(36)   DEFAULT NULL COMMENT 'Cookie-based ownership token',
   `created_at`      INT           NOT NULL COMMENT 'Unix timestamp (seconds)',
   PRIMARY KEY (`id`)
