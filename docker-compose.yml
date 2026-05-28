@@ -1,21 +1,44 @@
 services:
+  mariadb:
+    image: mariadb:11
+    container_name: chiselshare-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me_root}
+      MYSQL_DATABASE: ${DB_NAME:-chiselshare}
+      MYSQL_USER: ${DB_USER:-chiselshare}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change_me}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
     build:
       context: .
       args:
         - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://chiselshare.com}
+    depends_on:
+      mariadb:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - DATA_DIR=/app
       - PORT=3000
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT:-3306}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-chiselshare}
+      - DB_PASSWORD=${DB_PASSWORD:-change_me}
+      - DB_NAME=${DB_NAME:-chiselshare}
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://chiselshare.com}
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+
+volumes:
+  mariadb_data:
