@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { parseSchematicXml, parseChiselWizJson, isChiselWizContent } from './voxel-decoder';
-import { resolveTexture } from './texture-resolver';
+import { resolveTexture, resolveTextureRotation } from './texture-resolver';
 
 const THUMB_W = 512;
 const THUMB_H = 384;
@@ -73,6 +73,8 @@ export async function captureThumbnail(fileContent: string): Promise<Blob | null
             tex.minFilter = THREE.NearestFilter;
             tex.wrapS = THREE.RepeatWrapping;
             tex.wrapT = THREE.RepeatWrapping;
+            const rot = resolveTextureRotation(schematic.blockcodes[matIdx] ?? '');
+            if (rot) { tex.rotation = rot; tex.center.set(0.5, 0.5); }
             texCache.set(matIdx, tex);
             resolve(tex);
           },

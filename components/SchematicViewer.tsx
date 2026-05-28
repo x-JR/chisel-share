@@ -37,7 +37,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         'three/examples/jsm/controls/OrbitControls.js'
       );
       const { parseSchematicXml } = await import('@/lib/voxel-decoder');
-      const { resolveTexture } = await import('@/lib/texture-resolver');
+      const { resolveTexture, resolveTextureRotation } = await import('@/lib/texture-resolver');
 
       if (!isMounted) return;
 
@@ -112,6 +112,8 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
               tex.minFilter = THREE.NearestFilter;
               tex.wrapS = THREE.RepeatWrapping;
               tex.wrapT = THREE.RepeatWrapping;
+              const rot = resolveTextureRotation(blockcode);
+              if (rot) { tex.rotation = rot; tex.center.set(0.5, 0.5); }
               texCache.set(matIdx, tex);
               resolve(tex);
             },
