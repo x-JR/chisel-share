@@ -1,4 +1,4 @@
-import mysql, { RowDataPacket } from 'mysql2/promise';
+import mysql, { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 
 let _pool: mysql.Pool | null = null;
 let _schemaReady: Promise<void> | null = null;
@@ -42,7 +42,9 @@ function getPool(): mysql.Pool {
           download_count  INT          NOT NULL DEFAULT 0,
           collection_id   VARCHAR(36)  DEFAULT NULL,
           collection_order INT         NOT NULL DEFAULT 0,
-          PRIMARY KEY (id)
+          PRIMARY KEY (id),
+          INDEX idx_schematics_collection (collection_id),
+          INDEX idx_schematics_uploaded (uploaded_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
       // Migrations for existing installs
@@ -53,6 +55,15 @@ function getPool(): mysql.Pool {
           ADD COLUMN IF NOT EXISTS collection_order INT NOT NULL DEFAULT 0,
           ADD COLUMN IF NOT EXISTS author_name      TEXT DEFAULT NULL
       `).catch(() => { /* already present */ });
+      await pool.execute(
+        'CREATE INDEX IF NOT EXISTS idx_schematics_collection ON schematics (collection_id)'
+      ).catch(() => { /* already present */ });
+      await pool.execute(
+        'CREATE INDEX IF NOT EXISTS idx_schematics_uploaded ON schematics (uploaded_at)'
+      ).catch(() => { /* already present */ });
+      await pool.execute(
+        'CREATE INDEX IF NOT EXISTS idx_collections_created ON collections (created_at)'
+      ).catch(() => { /* already present */ });
       await pool.execute(`
         CREATE TABLE IF NOT EXISTS collections (
           id             VARCHAR(36)  NOT NULL,
@@ -61,7 +72,8 @@ function getPool(): mysql.Pool {
           author_name    TEXT         DEFAULT NULL,
           uploader_token VARCHAR(36)  DEFAULT NULL,
           created_at     INT          NOT NULL,
-          PRIMARY KEY (id)
+          PRIMARY KEY (id),
+          INDEX idx_collections_created (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
       await pool.execute(`
@@ -321,13 +333,18 @@ export async function updateSchematicMeta(
 export async function setSchematicOrders(
   updates: Array<{ id: string; collection_order: number }>
 ): Promise<void> {
+  if (!updates.length) return;
   const pool = await db();
-  for (const u of updates) {
-    await pool.execute(
-      'UPDATE schematics SET collection_order = ? WHERE id = ?',
-      [u.collection_order, u.id]
-    );
-  }
+  const cases  = updates.map(() => 'WHEN ? THEN ?').join(' ');
+  const inList = updates.map(() => '?').join(', ');
+  const params = [
+    ...updates.flatMap(u => [u.id, u.collection_order]),
+    ...updates.map(u => u.id),
+  ];
+  await pool.execute(
+    `UPDATE schematics SET collection_order = CASE id ${cases} END WHERE id IN (${inList})`,
+    params
+  );
 }
 
 export async function incrementDownloadCount(id: string): Promise<void> {
@@ -360,21 +377,19 @@ export async function hasLiked(schematicId: string, voterToken: string): Promise
 
 /** Toggles the like for a given voter. Returns true if now liked, false if unliked. */
 export async function toggleLike(schematicId: string, voterToken: string): Promise<boolean> {
-  const already = await hasLiked(schematicId, voterToken);
   const pool = await db();
-  if (already) {
-    await pool.execute(
-      'DELETE FROM likes WHERE schematic_id = ? AND voter_token = ?',
-      [schematicId, voterToken]
-    );
-    return false;
-  } else {
-    await pool.execute(
-      'INSERT INTO likes (schematic_id, voter_token, liked_at) VALUES (?, ?, ?)',
-      [schematicId, voterToken, Math.floor(Date.now() / 1000)]
-    );
-    return true;
-  }
+  // INSERT IGNORE: succeeds (affectedRows=1) if not yet liked → liked.
+  // Duplicate key silently ignored (affectedRows=0) → already liked, so delete → unliked.
+  const [ins] = await pool.execute<ResultSetHeader>(
+    'INSERT IGNORE INTO likes (schematic_id, voter_token, liked_at) VALUES (?, ?, ?)',
+    [schematicId, voterToken, Math.floor(Date.now() / 1000)]
+  );
+  if (ins.affectedRows > 0) return true;
+  await pool.execute(
+    'DELETE FROM likes WHERE schematic_id = ? AND voter_token = ?',
+    [schematicId, voterToken]
+  );
+  return false;
 }
 
 // ─── Collections ─────────────────────────────────────────────────────────────
@@ -492,6 +507,16 @@ export async function updateCollectionMeta(
 
 // ─── Collection Likes ────────────────────────────────────────────────────────
 
+/** Likes every schematic in a collection for a voter in one query (skips already-liked). */
+export async function likeAllCollectionSchematics(collectionId: string, voterToken: string): Promise<void> {
+  const pool = await db();
+  await pool.execute(
+    `INSERT IGNORE INTO likes (schematic_id, voter_token, liked_at)
+     SELECT id, ?, ? FROM schematics WHERE collection_id = ?`,
+    [voterToken, Math.floor(Date.now() / 1000), collectionId]
+  );
+}
+
 export async function getCollectionLikeCount(collectionId: string): Promise<number> {
   const pool = await db();
   const [rows] = await pool.execute<RowDataPacket[]>(
@@ -512,21 +537,17 @@ export async function hasLikedCollection(collectionId: string, voterToken: strin
 
 /** Toggles the collection like for a given voter. Returns true if now liked, false if unliked. */
 export async function toggleCollectionLike(collectionId: string, voterToken: string): Promise<boolean> {
-  const already = await hasLikedCollection(collectionId, voterToken);
   const pool = await db();
-  if (already) {
-    await pool.execute(
-      'DELETE FROM collection_likes WHERE collection_id = ? AND voter_token = ?',
-      [collectionId, voterToken]
-    );
-    return false;
-  } else {
-    await pool.execute(
-      'INSERT INTO collection_likes (collection_id, voter_token, liked_at) VALUES (?, ?, ?)',
-      [collectionId, voterToken, Math.floor(Date.now() / 1000)]
-    );
-    return true;
-  }
+  const [ins] = await pool.execute<ResultSetHeader>(
+    'INSERT IGNORE INTO collection_likes (collection_id, voter_token, liked_at) VALUES (?, ?, ?)',
+    [collectionId, voterToken, Math.floor(Date.now() / 1000)]
+  );
+  if (ins.affectedRows > 0) return true;
+  await pool.execute(
+    'DELETE FROM collection_likes WHERE collection_id = ? AND voter_token = ?',
+    [collectionId, voterToken]
+  );
+  return false;
 }
 
 // ─── Collection Images ────────────────────────────────────────────────────────
@@ -557,13 +578,18 @@ export async function deleteCollectionImage(id: string): Promise<void> {
 export async function setCollectionImageOrders(
   updates: Array<{ id: string; display_order: number }>
 ): Promise<void> {
+  if (!updates.length) return;
   const pool = await db();
-  for (const u of updates) {
-    await pool.execute(
-      'UPDATE collection_images SET display_order = ? WHERE id = ?',
-      [u.display_order, u.id]
-    );
-  }
+  const cases  = updates.map(() => 'WHEN ? THEN ?').join(' ');
+  const inList = updates.map(() => '?').join(', ');
+  const params = [
+    ...updates.flatMap(u => [u.id, u.display_order]),
+    ...updates.map(u => u.id),
+  ];
+  await pool.execute(
+    `UPDATE collection_images SET display_order = CASE id ${cases} END WHERE id IN (${inList})`,
+    params
+  );
 }
 
 export async function setCollectionThumbnailImage(

@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  check:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check & build
+        run: npm run build
+        env:
+          # DB vars are required by the pool initialiser at runtime but not
+          # during static analysis / build — supply dummies so the import
+          # graph resolves without throwing at module load time.
+          DB_HOST: localhost
+          DB_USER: ci
+          DB_NAME: ci

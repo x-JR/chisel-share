@@ -6,6 +6,7 @@ import {
   getCollectionLikeCount,
   hasLikedCollection,
   toggleCollectionLike,
+  likeAllCollectionSchematics,
 } from '@/lib/db';
 import { logAction } from '@/lib/logger';
 
@@ -48,6 +49,9 @@ export async function POST(
   }
 
   const liked = await toggleCollectionLike(id, voterToken);
+  if (liked) {
+    await likeAllCollectionSchematics(id, voterToken);
+  }
   const count = await getCollectionLikeCount(id);
 
   logAction({

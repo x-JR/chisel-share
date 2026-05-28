@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const REPORT_REASONS = [
   { value: 'offensive', label: 'Offensive / Inappropriate' },
@@ -16,16 +16,11 @@ export default function ReportButton({ collectionId }: Props) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>('offensive');
   const [submitting, setSubmitting] = useState(false);
-  const [reported, setReported] = useState(false);
+  const [reported, setReported] = useState(() => {
+    try { return sessionStorage.getItem(`reported:${collectionId}`) === '1'; }
+    catch { return false; }
+  });
   const [error, setError] = useState<string | null>(null);
-
-  // Persist reported state across navigation
-  useEffect(() => {
-    try {
-      const key = `reported:${collectionId}`;
-      if (sessionStorage.getItem(key) === '1') setReported(true);
-    } catch { /* sessionStorage unavailable */ }
-  }, [collectionId]);
 
   async function handleSubmit() {
     setSubmitting(true);
