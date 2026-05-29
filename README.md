@@ -1,6 +1,6 @@
 # Chisel Share
 
-A self-hosted community gallery for **Vintage Story QP Chisel** (Pantograph mod) schematics. Upload `.xml` or `.json` schematic files and view them as interactive 3D renders in the browser.
+A self-hosted community gallery for [**QP Chisel**](https://mods.vintagestory.at/chiseltools) and [**Chisel Wiz**](https://mods.vintagestory.at/chiselwiz) schematics. Upload `.xml` or `.json` schematic files and view them as interactive 3D renders in the browser.
 
 **Live site:** https://chisel.tekkie.com.au
 
