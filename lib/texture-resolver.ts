@@ -89,9 +89,9 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`stone/polishedrock/${m[1]}.png`);
   }
 
-  // game:debarkedlog-{wood}-{orientation}  (ns/ew = no rotation, ud = 90° — handled by resolveTextureRotation)
+  // game:debarkedlog-{wood}-{orientation}  (ns = no rotation, we/ud = 90° — handled by resolveTextureRotation)
   {
-    const m = blockcode.match(/^game:debarkedlog-([^-]+)-(?:ns|ew|ud)$/);
+    const m = blockcode.match(/^game:debarkedlog-([^-]+)-(?:ns|we|ud)$/);
     if (m) return tex(`wood/debarked/${m[1]}.png`);
   }
 
@@ -182,7 +182,7 @@ export function resolveTexture(blockcode: string): string | null {
  * the wood grain runs along the log axis.
  */
 export function resolveTextureRotation(blockcode: string): number {
-  return blockcode.endsWith('-ud') ? Math.PI / 2 : 0;
+  return (blockcode.endsWith('-ud') || blockcode.endsWith('-we')) ? Math.PI / 2 : 0;
 }
 
 /**
