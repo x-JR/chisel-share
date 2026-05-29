@@ -89,11 +89,13 @@ export async function captureThumbnail(fileContent: string): Promise<Blob | null
       const tex = await getTexture(matIdx);
       const blockcode = schematic.blockcodes[matIdx] ?? '';
       const isGlow = blockcode.startsWith('game:creativeglow-');
+      const isGlass = blockcode.startsWith('game:glass-');
       let mat: THREE.MeshLambertMaterial;
       if (tex) {
         mat = new THREE.MeshLambertMaterial({
           map: tex,
           ...(isGlow && { emissive: new THREE.Color(0xffffff), emissiveMap: tex, emissiveIntensity: 0.7 }),
+          ...(isGlass && { transparent: true, opacity: 0.7, depthWrite: false }),
         });
       } else {
         const blockcode = schematic.blockcodes[matIdx] ?? '';
