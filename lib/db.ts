@@ -121,6 +121,18 @@ function getPool(): mysql.Pool {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
       await pool.execute(`
+        CREATE TABLE IF NOT EXISTS comments (
+          id            VARCHAR(36)   NOT NULL,
+          target_type   VARCHAR(20)   NOT NULL,
+          target_id     VARCHAR(36)   NOT NULL,
+          author_name   VARCHAR(100)  DEFAULT NULL,
+          body          TEXT          NOT NULL,
+          created_at    INT           NOT NULL,
+          PRIMARY KEY (id),
+          INDEX idx_comments_target (target_type, target_id, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      await pool.execute(`
         CREATE TABLE IF NOT EXISTS logs (
           id            INT          NOT NULL AUTO_INCREMENT,
           timestamp     INT          NOT NULL,
@@ -684,4 +696,50 @@ export async function insertLog(entry: LogEntry): Promise<void> {
       entry.details,
     ]
   );
+}
+
+// ─── Comments ────────────────────────────────────────────────────────────────
+
+export interface CommentRecord {
+  id: string;
+  target_type: string;
+  target_id: string;
+  author_name: string | null;
+  body: string;
+  created_at: number;
+}
+
+export async function getComments(
+  targetType: string,
+  targetId: string
+): Promise<CommentRecord[]> {
+  const pool = await db();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM comments WHERE target_type = ? AND target_id = ? ORDER BY created_at ASC',
+    [targetType, targetId]
+  );
+  return rows as CommentRecord[];
+}
+
+export async function getComment(id: string): Promise<CommentRecord | undefined> {
+  const pool = await db();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM comments WHERE id = ?',
+    [id]
+  );
+  return rows[0] as CommentRecord | undefined;
+}
+
+export async function insertComment(record: CommentRecord): Promise<void> {
+  const pool = await db();
+  await pool.execute(
+    `INSERT INTO comments (id, target_type, target_id, author_name, body, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [record.id, record.target_type, record.target_id, record.author_name, record.body, record.created_at]
+  );
+}
+
+export async function deleteComment(id: string): Promise<void> {
+  const pool = await db();
+  await pool.execute('DELETE FROM comments WHERE id = ?', [id]);
 }

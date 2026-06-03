@@ -156,13 +156,32 @@ export default async function GalleryPage({ searchParams }: PageProps) {
       {showCollections && collectionCount > 0 && (
         <section className="mb-10">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-slate-200">Collections</h2>
-            <Link
-              href="/upload/collection"
-              className="text-amber-500 hover:text-amber-400 text-sm transition-colors"
-            >
-              + New collection
-            </Link>
+            <h2 className="text-xl font-semibold text-slate-200">
+              Collections
+              {view === 'both' && (
+                <span className="ml-2 text-sm font-normal text-slate-500">
+                  {collectionCount > collectionLimit
+                    ? `(showing ${collectionLimit} of ${collectionCount})`
+                    : `(${collectionCount})`}
+                </span>
+              )}
+            </h2>
+            <div className="flex items-center gap-4">
+              {view === 'both' && collectionCount > collectionLimit && (
+                <Link
+                  href={`/?view=collections${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`}
+                  className="text-slate-400 hover:text-slate-200 text-sm transition-colors"
+                >
+                  View all {collectionCount} →
+                </Link>
+              )}
+              <Link
+                href="/upload/collection"
+                className="text-amber-500 hover:text-amber-400 text-sm transition-colors"
+              >
+                + New collection
+              </Link>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {collections.map((c) => (
