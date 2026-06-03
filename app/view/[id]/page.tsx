@@ -4,11 +4,12 @@ import path from 'path';
 import fs from 'fs/promises';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
-import { getSchematic } from '@/lib/db';
+import { getSchematic, getComments } from '@/lib/db';
 import { blockcodeToColor, resolveTexture } from '@/lib/texture-resolver';
 import SchematicViewer from '@/components/SchematicViewerClient';
 import EditSchematicClient from '@/components/EditSchematicClient';
 import RegenerateThumbnailButton from '@/components/RegenerateThumbnailButton';
+import CommentsSection from '@/components/CommentsSection';
 
 function schematicsDir(): string {
   const dataDir = process.env.DATA_DIR ?? process.cwd();
@@ -63,6 +64,8 @@ export default async function ViewPage({ params }: PageProps) {
   const isAdmin = !!adminToken && uploaderToken === adminToken;
   const canEdit =
     isAdmin || (!!record.uploader_token && record.uploader_token === uploaderToken);
+
+  const comments = await getComments('schematic', id);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -149,6 +152,13 @@ export default async function ViewPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      <CommentsSection
+        targetType="schematic"
+        targetId={record.id}
+        initialComments={comments}
+        isAdmin={isAdmin}
+      />
     </main>
   );
 }

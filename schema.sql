@@ -57,3 +57,16 @@ CREATE TABLE IF NOT EXISTS `collection_likes` (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `comments` (
+  `id`           VARCHAR(36)   NOT NULL,
+  `target_type`  VARCHAR(20)   NOT NULL COMMENT '''schematic'' or ''collection''',
+  `target_id`    VARCHAR(36)   NOT NULL,
+  `author_name`  VARCHAR(100)  DEFAULT NULL,
+  `body`         TEXT          NOT NULL,
+  `created_at`   INT           NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `idx_comments_target` (`target_type`, `target_id`, `created_at`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;

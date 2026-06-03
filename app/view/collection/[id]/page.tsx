@@ -8,8 +8,10 @@ import {
   getCollectionLikeCount,
   getCollectionImages,
   getCollectionReportCount,
+  getComments,
 } from '@/lib/db';
 import EditCollectionClient from '@/components/EditCollectionClient';
+import CommentsSection from '@/components/CommentsSection';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -53,6 +55,8 @@ export default async function CollectionViewPage({ params }: PageProps) {
 
   const reportCount = isAdmin ? await getCollectionReportCount(id) : undefined;
 
+  const comments = await getComments('collection', id);
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       {/* Breadcrumb */}
@@ -91,6 +95,13 @@ export default async function CollectionViewPage({ params }: PageProps) {
         canEdit={canEdit}
         isAdmin={isAdmin}
         reportCount={reportCount}
+      />
+
+      <CommentsSection
+        targetType="collection"
+        targetId={collection.id}
+        initialComments={comments}
+        isAdmin={isAdmin}
       />
     </main>
   );
