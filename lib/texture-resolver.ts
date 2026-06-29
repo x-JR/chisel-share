@@ -89,6 +89,12 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`stone/polishedrock/${m[1]}.png`);
   }
 
+  // game:hay-{variant}-{orientation}  (ns/we/ud)
+  {
+    const m = blockcode.match(/^game:hay-([^-]+)-(?:ns|we|ud)$/);
+    if (m) return tex(`hay/${m[1]}-side.png`);
+  }
+
   // game:debarkedlog-{wood}-{orientation}  (ns = no rotation, we/ud = 90° — handled by resolveTextureRotation)
   {
     const m = blockcode.match(/^game:debarkedlog-([^-]+)-(?:ns|we|ud)$/);
