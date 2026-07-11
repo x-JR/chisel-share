@@ -11,6 +11,7 @@ interface Props {
 export default function SchematicViewer({ xmlContent, className = '' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [solidColors, setSolidColors] = useState(false);
+  const [hasMissingTextures, setHasMissingTextures] = useState(false);
 
   // Ref so the async init can read the latest toggle state after it finishes,
   // and so the toggle handler can call the swap immediately if init is done.
@@ -30,6 +31,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
     let animationId: number;
     let isMounted = true;
     let disposeAll: (() => void) | undefined;
+    setHasMissingTextures(false);
 
     async function init() {
       const THREE = await import('three');
@@ -43,6 +45,14 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
 
       const schematic = parseSchematicXml(xmlContent);
       if (!schematic.cuboids.length) return;
+
+      // Detect blockcodes with no texture resolver (excluding intentionally colour-only blocks)
+      const intentionallyColorOnly = (bc: string) =>
+        /^game:creativeglow/.test(bc) || /^chiseltools:pastel-/.test(bc);
+      const hasUnresolved = schematic.blockcodes.some(
+        (bc) => resolveTexture(bc) === null && !intentionallyColorOnly(bc)
+      );
+      if (hasUnresolved) setHasMissingTextures(true);
 
       console.group('[SchematicViewer] Parsed schematic');
       console.log('Name:', schematic.name);
@@ -120,6 +130,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
             undefined,
             () => {
               console.warn(`[SchematicViewer] matIdx=${matIdx} texture FAILED to load: ${url}`);
+              setHasMissingTextures(true);
               texCache.set(matIdx, null);
               resolve(null);
             }
@@ -295,6 +306,12 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         />
         <span className="text-slate-300 text-xs font-medium">Solid colours</span>
       </label>
+      {hasMissingTextures && (
+        <div className="absolute top-3 left-3 right-16 flex items-center gap-2 bg-amber-950/80 border border-amber-700/50 rounded-lg px-3 py-2 text-xs text-amber-300 backdrop-blur-sm pointer-events-none">
+          <span>⚠</span>
+          Some textures couldn&apos;t be resolved — preview will differ from in-game.
+        </div>
+      )}
     </div>
   );
 }

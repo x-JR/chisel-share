@@ -211,10 +211,16 @@ export function resolveTextureRotation(blockcode: string): number {
  * Returns an approximate CSS hex colour for use in gallery material swatches.
  */
 export function blockcodeToColor(blockcode: string): string {
-  // chiseltools:pastel-{rrggbb}  — use the embedded hex colour directly
+  // chiseltools:pastel-{rrggbb}  — blend the colour 50% with white to produce a pastel tone
   {
     const m = blockcode.match(/^chiseltools:pastel-([0-9a-fA-F]{6})$/);
-    if (m) return `#${m[1]}`;
+    if (m) {
+      const hex = m[1];
+      const r = Math.round((parseInt(hex.slice(0, 2), 16) + 255) / 2);
+      const g = Math.round((parseInt(hex.slice(2, 4), 16) + 255) / 2);
+      const b = Math.round((parseInt(hex.slice(4, 6), 16) + 255) / 2);
+      return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
   }
 
   if (blockcode.includes('packeddirt')) return '#8B7355';
