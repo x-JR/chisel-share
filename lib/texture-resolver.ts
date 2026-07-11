@@ -174,6 +174,28 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`metal/${m[1]}/${m[2]}.png`);
   }
 
+  // game:packeddirt
+  if (blockcode === 'game:packeddirt') return tex('soil/flooring/packeddirt1a.png');
+
+  // game:soil-{fertility}-{grass}
+  {
+    const m = blockcode.match(/^game:soil-([^-]+)-/);
+    if (m) {
+      const fertility = m[1];
+      const map: Record<string, string> = {
+        veryhigh: 'soil/ferthigh.png',
+        high: 'soil/ferthigh.png',
+        medium: 'soil/fertmedium.png',
+        low: 'soil/fertlow.png',
+        verylow: 'soil/fertverylow.png',
+      };
+      return tex(map[fertility] ?? 'soil/fertmedium.png');
+    }
+  }
+
+  // chiseltools:pastel-{hex}  — solid colour, no texture
+  if (/^chiseltools:pastel-/.test(blockcode)) return null;
+
   // game:creativeglow-*  — no texture, use emissive colour
   if (/^game:creativeglow/.test(blockcode)) {
     return null;
@@ -195,6 +217,13 @@ export function resolveTextureRotation(blockcode: string): number {
  * Returns an approximate CSS hex colour for use in gallery material swatches.
  */
 export function blockcodeToColor(blockcode: string): string {
+  // chiseltools:pastel-{rrggbb}  — use the embedded hex colour directly
+  {
+    const m = blockcode.match(/^chiseltools:pastel-([0-9a-fA-F]{6})$/);
+    if (m) return `#${m[1]}`;
+  }
+
+  if (blockcode.includes('packeddirt')) return '#8B7355';
   if (blockcode.includes('drystone')) return '#8B7355';
   if (blockcode.includes('polishedrock') || blockcode.includes('rockpolished')) return '#9B9B9B';
   if (blockcode.includes('planks') || blockcode.includes('plank')) return '#C19A6B';
