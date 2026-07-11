@@ -9,7 +9,8 @@ import { blockcodeToColor, resolveTexture } from '@/lib/texture-resolver';
 import SchematicViewer from '@/components/SchematicViewerClient';
 import EditSchematicClient from '@/components/EditSchematicClient';
 import RegenerateThumbnailButton from '@/components/RegenerateThumbnailButton';
-import CommentsSection from '@/components/CommentsSection';
+import CommentsListPanel from '@/components/CommentsListPanel';
+import CommentForm from '@/components/CommentForm';
 
 function schematicsDir(): string {
   const dataDir = process.env.DATA_DIR ?? process.cwd();
@@ -80,42 +81,8 @@ export default async function ViewPage({ params }: PageProps) {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* 3-D Viewer */}
-        <div className="lg:flex-1 min-w-0">
-          <div
-            className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden"
-            style={{ height: '520px' }}
-          >
-            <SchematicViewer xmlContent={xmlContent} className="w-full h-full" />
-          </div>
-          <p className="text-slate-600 text-xs mt-2 text-center">
-            Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Right-drag to pan
-          </p>
-        </div>
-
-        {/* Sidebar */}
-        <div className="lg:w-80 flex-shrink-0 flex flex-col gap-4">
-          <EditSchematicClient
-            id={record.id}
-            initialDisplayName={record.display_name ?? record.name}
-            initialDescription={record.description}
-            initialAuthorName={record.author_name ?? null}
-            schematicName={record.name}
-            cuboidCount={record.cuboid_count}
-            downloadCount={record.download_count}
-            likeCount={record.like_count ?? 0}
-            uploadedAt={record.uploaded_at}
-            canEdit={canEdit}
-          />
-
-          {/* Admin tools */}
-          {isAdmin && (
-            <div className="bg-slate-900 border border-amber-800/40 rounded-xl p-5">
-              <h2 className="text-amber-400 font-semibold text-sm mb-3">Admin</h2>
-              <RegenerateThumbnailButton id={record.id} />
-            </div>
-          )}
-
+        {/* Left column: materials + comments */}
+        <div className="lg:w-72 flex-shrink-0 flex flex-col gap-4">
           {/* Materials */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <h2 className="text-slate-300 font-semibold mb-3">
@@ -153,15 +120,57 @@ export default async function ViewPage({ params }: PageProps) {
               })}
             </div>
           </div>
+
+          {/* Comments list */}
+          <CommentsListPanel
+            comments={comments}
+            isAdmin={isAdmin}
+            targetId={record.id}
+          />
+        </div>
+
+        {/* Centre: 3-D Viewer + comment form */}
+        <div className="lg:flex-1 min-w-0 flex flex-col gap-4">
+          <div>
+            <div
+              className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden"
+              style={{ height: '520px' }}
+            >
+              <SchematicViewer xmlContent={xmlContent} className="w-full h-full" />
+            </div>
+            <p className="text-slate-600 text-xs mt-2 text-center">
+              Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Right-drag to pan
+            </p>
+          </div>
+
+          {/* Leave a comment form */}
+          <CommentForm targetType="schematic" targetId={record.id} />
+        </div>
+
+        {/* Right sidebar: title + downloads */}
+        <div className="lg:w-80 flex-shrink-0 flex flex-col gap-4">
+          <EditSchematicClient
+            id={record.id}
+            initialDisplayName={record.display_name ?? record.name}
+            initialDescription={record.description}
+            initialAuthorName={record.author_name ?? null}
+            schematicName={record.name}
+            cuboidCount={record.cuboid_count}
+            downloadCount={record.download_count}
+            likeCount={record.like_count ?? 0}
+            uploadedAt={record.uploaded_at}
+            canEdit={canEdit}
+          />
+
+          {/* Admin tools */}
+          {isAdmin && (
+            <div className="bg-slate-900 border border-amber-800/40 rounded-xl p-5">
+              <h2 className="text-amber-400 font-semibold text-sm mb-3">Admin</h2>
+              <RegenerateThumbnailButton id={record.id} />
+            </div>
+          )}
         </div>
       </div>
-
-      <CommentsSection
-        targetType="schematic"
-        targetId={record.id}
-        initialComments={comments}
-        isAdmin={isAdmin}
-      />
     </main>
   );
 }
