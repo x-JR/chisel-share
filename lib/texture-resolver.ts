@@ -171,6 +171,22 @@ export function resolveTexture(blockcode: string): string | null {
   // game:packeddirt
   if (blockcode === 'game:packeddirt') return tex('soil/flooring/packeddirt1a.png');
 
+  // game:soil-{fertility}-{grass}
+  {
+    const m = blockcode.match(/^game:soil-([^-]+)-/);
+    if (m) {
+      const fertility = m[1];
+      const map: Record<string, string> = {
+        veryhigh: 'soil/ferthigh.png',
+        high: 'soil/ferthigh.png',
+        medium: 'soil/fertmedium.png',
+        low: 'soil/fertlow.png',
+        verylow: 'soil/fertverylow.png',
+      };
+      return tex(map[fertility] ?? 'soil/fertmedium.png');
+    }
+  }
+
   // chiseltools:pastel-{hex}  — solid colour, no texture
   if (/^chiseltools:pastel-/.test(blockcode)) return null;
 
