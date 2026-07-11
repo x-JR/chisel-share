@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { parseSchematicXml, parseChiselWizJson, isChiselWizContent } from './voxel-decoder';
-import { resolveTexture, resolveTextureRotation } from './texture-resolver';
+import { resolveTexture, resolveTextureRotation, blockcodeToColor } from './texture-resolver';
 
 const THUMB_W = 512;
 const THUMB_H = 384;
@@ -103,7 +103,7 @@ export async function captureThumbnail(fileContent: string): Promise<Blob | null
         mat = new THREE.MeshLambertMaterial({
           color: isGlow
             ? 0xffe066
-            : new THREE.Color().setHSL((matIdx * 0.382) % 1, 0.55, 0.5),
+            : new THREE.Color(blockcodeToColor(blockcode)),
           emissive:          isGlow ? new THREE.Color(0xffaa00) : new THREE.Color(0),
           emissiveIntensity: isGlow ? 0.5 : 0,
         });
