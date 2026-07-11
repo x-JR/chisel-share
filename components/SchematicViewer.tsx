@@ -37,7 +37,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         'three/examples/jsm/controls/OrbitControls.js'
       );
       const { parseSchematicXml } = await import('@/lib/voxel-decoder');
-      const { resolveTexture, resolveTextureRotation } = await import('@/lib/texture-resolver');
+      const { resolveTexture, resolveTextureRotation, blockcodeToColor } = await import('@/lib/texture-resolver');
 
       if (!isMounted) return;
 
@@ -146,7 +146,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
           const blockcode = schematic.blockcodes[matIdx] ?? '';
           const isGlow = blockcode.includes('creativeglow');
           mat = new THREE.MeshLambertMaterial({
-            color: isGlow ? 0xffe066 : new THREE.Color().setHSL((matIdx * 0.382) % 1, 0.55, 0.5),
+            color: isGlow ? 0xffe066 : new THREE.Color(blockcodeToColor(blockcode)),
             emissive: isGlow ? new THREE.Color(0xffaa00) : new THREE.Color(0),
             emissiveIntensity: isGlow ? 0.5 : 0,
           });
@@ -160,7 +160,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         const blockcode = schematic.blockcodes[matIdx] ?? '';
         const isGlow = blockcode.includes('creativeglow');
         const mat = new THREE.MeshLambertMaterial({
-          color: isGlow ? 0xffe066 : new THREE.Color().setHSL((matIdx * 0.382) % 1, 0.72, 0.58),
+          color: isGlow ? 0xffe066 : new THREE.Color(blockcodeToColor(blockcode)),
           emissive: isGlow ? new THREE.Color(0xffaa00) : new THREE.Color(0),
           emissiveIntensity: isGlow ? 0.5 : 0,
         });
