@@ -124,6 +124,9 @@ export default async function ViewPage({ params }: PageProps) {
             <div className="space-y-2">
               {blockcodes.map((code, i) => {
                 const texUrl = resolveTexture(code);
+                const intentionallyColorOnly =
+                  /^game:creativeglow/.test(code) || /^chiseltools:pastel-/.test(code);
+                const unresolved = texUrl === null && !intentionallyColorOnly;
                 return (
                   <div key={i} className="flex items-center gap-2.5">
                     {texUrl ? (
@@ -140,8 +143,8 @@ export default async function ViewPage({ params }: PageProps) {
                       />
                     )}
                     <span
-                      className="text-slate-300 text-sm font-mono truncate"
-                      title={code}
+                      className={`text-sm font-mono truncate ${unresolved ? 'text-red-400/80' : 'text-slate-300'}`}
+                      title={unresolved ? `${code} (texture not resolved)` : code}
                     >
                       {code.replace(/^game:/, '')}
                     </span>
