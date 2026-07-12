@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSchematic } from '@/lib/db';
 import { logAction } from '@/lib/logger';
+import { checkRateLimit } from '@/lib/rate-limit';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -47,20 +48,33 @@ export async function POST(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  // Admin-only: uploader_token cookie must match ADMIN_TOKEN env var
-  const adminToken = process.env.ADMIN_TOKEN;
-  if (!adminToken) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
   const cookieStore = await cookies();
   const uploaderToken = cookieStore.get('uploader_token')?.value;
-  if (uploaderToken !== adminToken) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const adminToken = process.env.ADMIN_TOKEN;
+  const isAdmin = !!adminToken && uploaderToken === adminToken;
 
   const record = await getSchematic(id);
   if (!record) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const isOwner = !!record.uploader_token && record.uploader_token === uploaderToken;
+
+  if (!isAdmin && !isOwner) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // Rate-limit owners to 1 regeneration per schematic per 10 minutes.
+  // Admins are exempt.
+  if (!isAdmin) {
+    const rl = checkRateLimit(id, 'regen_thumb', 1, 10 * 60 * 1000);
+    if (!rl.allowed) {
+      const retryAfterSec = Math.ceil(rl.retryAfterMs / 1000);
+      return NextResponse.json(
+        { error: `Rate limit exceeded. Try again in ${retryAfterSec} seconds.` },
+        { status: 429, headers: { 'Retry-After': String(retryAfterSec) } },
+      );
+    }
   }
 
   let formData: FormData;

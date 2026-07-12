@@ -6,22 +6,81 @@ import type * as THREE from 'three';
 interface Props {
   xmlContent: string;
   className?: string;
+  schematicId?: string;
+  canRotate?: boolean;
+  onXmlUpdate?: (newXml: string) => void;
 }
 
-export default function SchematicViewer({ xmlContent, className = '' }: Props) {
+export default function SchematicViewer({ xmlContent, className = '', schematicId, canRotate, onXmlUpdate }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [solidColors, setSolidColors] = useState(false);
   const [hasMissingTextures, setHasMissingTextures] = useState(false);
+  const [rotationSteps, setRotationSteps] = useState(0);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'ok' | 'error'>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Ref so the async init can read the latest toggle state after it finishes,
   // and so the toggle handler can call the swap immediately if init is done.
   const solidColorsRef = useRef(false);
   const applyModeRef = useRef<((solid: boolean) => void) | null>(null);
+  const rotationStepsRef = useRef(0);
+  const applyRotationRef = useRef<((steps: number) => void) | null>(null);
 
   function handleToggle(checked: boolean) {
     solidColorsRef.current = checked;
     setSolidColors(checked);
     applyModeRef.current?.(checked);
+  }
+
+  function handleRotateCW() {
+    setSaveStatus('idle');
+    setSaveError(null);
+    const steps = (rotationStepsRef.current + 1) % 4;
+    rotationStepsRef.current = steps;
+    setRotationSteps(steps);
+    applyRotationRef.current?.(steps);
+  }
+
+  function handleRotateCCW() {
+    setSaveStatus('idle');
+    setSaveError(null);
+    const steps = (rotationStepsRef.current + 3) % 4;
+    rotationStepsRef.current = steps;
+    setRotationSteps(steps);
+    applyRotationRef.current?.(steps);
+  }
+
+  async function handleSaveRotation() {
+    if (!schematicId || rotationStepsRef.current === 0) return;
+    setSaveStatus('saving');
+    setSaveError(null);
+    try {
+      const { parseSchematicXml } = await import('@/lib/voxel-decoder');
+      const { rotateCuboidsY, encodeVoxelData } = await import('@/lib/voxel-encoder');
+      const schematic = parseSchematicXml(xmlContent);
+      const rotated = rotateCuboidsY(schematic.cuboids, rotationStepsRef.current);
+      const voxeldata = encodeVoxelData(rotated);
+      const res = await fetch(`/api/schematics/${schematicId}/rotate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voxeldata }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error ?? 'Save failed');
+      }
+      const { xmlContent: newXml } = await res.json() as { xmlContent: string };
+      // Reset rotation before propagating the new XML so the rebuilt scene
+      // starts at 0 rotation (the rotation is now baked into the saved file).
+      rotationStepsRef.current = 0;
+      setRotationSteps(0);
+      applyRotationRef.current?.(0);
+      onXmlUpdate?.(newXml);
+      setSaveStatus('ok');
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Save failed');
+      setSaveStatus('error');
+    }
   }
 
   useEffect(() => {
@@ -91,7 +150,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
 
       // Camera
       const camera = new THREE.PerspectiveCamera(45, w / h, 0.001, 200);
-      camera.position.set(cx + span * 1.6, cy + span * 1.3, cz + span * 1.6);
+      camera.position.set(cx - span * 1.6, cy + span * 1.3, cz - span * 1.6);
       camera.lookAt(cx, cy, cz);
 
       // Lights
@@ -181,6 +240,11 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         return mat;
       }
 
+      // Group used for live Y-axis rotation preview (no scene rebuild needed)
+      const meshGroup = new THREE.Group();
+      meshGroup.position.set(cx, cy, cz);
+      scene.add(meshGroup);
+
       // Build meshes and track matIdx per mesh for mode swapping
       const meshEntries: Array<{ mesh: THREE.Mesh; matIdx: number }> = [];
 
@@ -216,11 +280,11 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         const mat = await getTexMaterial(c.matIdx);
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(
-          meshPX,
-          meshPY,
-          meshPZ
+          meshPX - cx,
+          meshPY - cy,
+          meshPZ - cz
         );
-        scene.add(mesh);
+        meshGroup.add(mesh);
         meshEntries.push({ mesh, matIdx: c.matIdx });
       }
 
@@ -238,6 +302,14 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
 
       // Apply whichever mode the user may have toggled while init was loading
       if (solidColorsRef.current) applyModeRef.current(true);
+
+      // Rotation — called by the rotate handlers to spin the group without
+      // tearing down and rebuilding the whole Three.js scene.
+      applyRotationRef.current = (steps: number) => {
+        meshGroup.rotation.y = -steps * Math.PI / 2;
+      };
+      // Restore any rotation the user may have applied before init finished.
+      applyRotationRef.current(rotationStepsRef.current);
 
       // OrbitControls
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -270,6 +342,7 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         resizeObs.disconnect();
         controls.dispose();
         applyModeRef.current = null;
+        applyRotationRef.current = null;
         scene.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
             obj.geometry.dispose();
@@ -296,9 +369,14 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
     };
   }, [xmlContent]);
 
+  const isChiselWiz = xmlContent.trimStart().startsWith('{');
+  const showRotate = canRotate && !isChiselWiz;
+
   return (
     <div className={`relative w-full h-full ${className}`}>
       <div ref={containerRef} className="w-full h-full bg-slate-900 rounded-lg overflow-hidden" />
+
+      {/* Solid colours toggle — bottom-right */}
       <label className="absolute bottom-3 right-3 flex items-center gap-2 bg-slate-900/80 hover:bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-1.5 cursor-pointer select-none backdrop-blur-sm transition-colors">
         <input
           type="checkbox"
@@ -308,6 +386,44 @@ export default function SchematicViewer({ xmlContent, className = '' }: Props) {
         />
         <span className="text-slate-300 text-xs font-medium">Solid colours</span>
       </label>
+
+      {/* Rotation controls — bottom-left (owners only, XML format only) */}
+      {showRotate && (
+        <div className="absolute bottom-3 left-3 flex flex-col items-start gap-1.5">
+          <div className="flex gap-1">
+            <button
+              onClick={handleRotateCCW}
+              title="Rotate 90° counter-clockwise"
+              className="flex items-center justify-center w-8 h-8 bg-slate-900/80 hover:bg-slate-800/90 border border-slate-700 rounded-lg text-slate-300 text-base backdrop-blur-sm transition-colors"
+            >
+              ↺
+            </button>
+            <button
+              onClick={handleRotateCW}
+              title="Rotate 90° clockwise"
+              className="flex items-center justify-center w-8 h-8 bg-slate-900/80 hover:bg-slate-800/90 border border-slate-700 rounded-lg text-slate-300 text-base backdrop-blur-sm transition-colors"
+            >
+              ↻
+            </button>
+          </div>
+          {rotationSteps !== 0 && saveStatus !== 'ok' && (
+            <button
+              onClick={handleSaveRotation}
+              disabled={saveStatus === 'saving'}
+              className="px-2.5 py-1 bg-amber-600/80 hover:bg-amber-500/90 border border-amber-500/50 rounded-lg text-white text-xs font-medium backdrop-blur-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saveStatus === 'saving' ? 'Saving…' : 'Save rotation'}
+            </button>
+          )}
+          {saveStatus === 'ok' && (
+            <p className="text-emerald-400 text-xs bg-slate-900/80 rounded px-2 py-1">Saved!</p>
+          )}
+          {saveStatus === 'error' && saveError && (
+            <p className="text-red-400 text-xs bg-slate-900/80 rounded px-2 py-1 max-w-[160px]">{saveError}</p>
+          )}
+        </div>
+      )}
+
       {hasMissingTextures && (
         <div className="absolute top-3 left-3 right-16 flex items-center gap-2 bg-amber-950/80 border border-amber-700/50 rounded-lg px-3 py-2 text-xs text-amber-300 backdrop-blur-sm pointer-events-none">
           <span>⚠</span>

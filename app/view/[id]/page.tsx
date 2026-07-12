@@ -136,7 +136,12 @@ export default async function ViewPage({ params }: PageProps) {
               className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden"
               style={{ height: '520px' }}
             >
-              <SchematicViewer xmlContent={xmlContent} className="w-full h-full" />
+              <SchematicViewer
+                xmlContent={xmlContent}
+                className="w-full h-full"
+                schematicId={record.id}
+                canRotate={canEdit}
+              />
             </div>
             <p className="text-slate-600 text-xs mt-2 text-center">
               Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Right-drag to pan
@@ -162,10 +167,12 @@ export default async function ViewPage({ params }: PageProps) {
             canEdit={canEdit}
           />
 
-          {/* Admin tools */}
-          {isAdmin && (
+          {/* Owner / admin tools */}
+          {canEdit && (
             <div className="bg-slate-900 border border-amber-800/40 rounded-xl p-5">
-              <h2 className="text-amber-400 font-semibold text-sm mb-3">Admin</h2>
+              <h2 className="text-amber-400 font-semibold text-sm mb-3">
+                {isAdmin ? 'Admin' : 'Tools'}
+              </h2>
               <RegenerateThumbnailButton id={record.id} />
             </div>
           )}
