@@ -384,12 +384,29 @@ export default function SchematicViewer({ xmlContent, className = '', schematicI
           onChange={(e) => handleToggle(e.target.checked)}
           className="w-3.5 h-3.5 accent-amber-500 cursor-pointer"
         />
-        <span className="text-slate-300 text-xs font-medium">Solid colours</span>
+        <span className="text-slate-300 text-xs font-medium">Material View</span>
       </label>
 
       {/* Rotation controls — bottom-left (owners only, XML format only) */}
       {showRotate && (
         <div className="absolute bottom-3 left-3 flex flex-col items-start gap-1.5">
+          {/* Save button is first in DOM order so it appears above the rotate
+              buttons, preventing accidental saves when the layout shifts. */}
+          {rotationSteps !== 0 && saveStatus !== 'ok' && (
+            <button
+              onClick={handleSaveRotation}
+              disabled={saveStatus === 'saving'}
+              className="px-2.5 py-1 bg-amber-600/80 hover:bg-amber-500/90 border border-amber-500/50 rounded-lg text-white text-xs font-medium backdrop-blur-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saveStatus === 'saving' ? 'Saving…' : 'Save rotation'}
+            </button>
+          )}
+          {saveStatus === 'ok' && (
+            <p className="text-emerald-400 text-xs bg-slate-900/80 rounded px-2 py-1">Saved!</p>
+          )}
+          {saveStatus === 'error' && saveError && (
+            <p className="text-red-400 text-xs bg-slate-900/80 rounded px-2 py-1 max-w-[160px]">{saveError}</p>
+          )}
           <div className="flex gap-1">
             <button
               onClick={handleRotateCCW}
@@ -406,21 +423,6 @@ export default function SchematicViewer({ xmlContent, className = '', schematicI
               ↻
             </button>
           </div>
-          {rotationSteps !== 0 && saveStatus !== 'ok' && (
-            <button
-              onClick={handleSaveRotation}
-              disabled={saveStatus === 'saving'}
-              className="px-2.5 py-1 bg-amber-600/80 hover:bg-amber-500/90 border border-amber-500/50 rounded-lg text-white text-xs font-medium backdrop-blur-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saveStatus === 'saving' ? 'Saving…' : 'Save rotation'}
-            </button>
-          )}
-          {saveStatus === 'ok' && (
-            <p className="text-emerald-400 text-xs bg-slate-900/80 rounded px-2 py-1">Saved!</p>
-          )}
-          {saveStatus === 'error' && saveError && (
-            <p className="text-red-400 text-xs bg-slate-900/80 rounded px-2 py-1 max-w-[160px]">{saveError}</p>
-          )}
         </div>
       )}
 

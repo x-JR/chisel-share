@@ -239,5 +239,13 @@ export function blockcodeToColor(blockcode: string): string {
   if (blockcode.includes('glass')) return '#ADD8E6';
   if (blockcode.includes('metal')) return '#A8A9AD';
   if (blockcode.includes('glow') || blockcode.includes('creativeglow')) return '#FFE066';
-  return '#888888';
+
+  // Fallback: derive a deterministic hue from the blockcode string so every
+  // distinct material gets a unique colour rather than all collapsing to grey.
+  let h = 5381;
+  for (let i = 0; i < blockcode.length; i++) {
+    h = (Math.imul(h, 31) + blockcode.charCodeAt(i)) | 0;
+  }
+  const hue = Math.abs(h) % 360;
+  return `hsl(${hue}, 55%, 52%)`;
 }
