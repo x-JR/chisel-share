@@ -47,7 +47,7 @@ export async function captureThumbnail(fileContent: string): Promise<Blob | null
 
     // Camera — same angle as the interactive viewer
     const camera = new THREE.PerspectiveCamera(45, THUMB_W / THUMB_H, 0.001, 200);
-    camera.position.set(cx + span * 1.6, cy + span * 1.3, cz + span * 1.6);
+    camera.position.set(cx - span * 1.6, cy + span * 1.3, cz - span * 1.6);
     camera.lookAt(cx, cy, cz);
 
     // Lighting — matches the viewer
