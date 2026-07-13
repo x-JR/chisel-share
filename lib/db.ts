@@ -24,6 +24,8 @@ function getPool(): mysql.Pool {
       waitForConnections: true,
       connectionLimit: 10,
       charset: 'utf8mb4',
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000,
     });
 
     _schemaReady = (async (pool: mysql.Pool) => {
