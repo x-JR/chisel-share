@@ -101,6 +101,21 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`wood/debarked/${m[1]}.png`);
   }
 
+  // game:log-placed-{wood}-{orientation}  (ns = vertical/default bark texture, we/ud = horizontal "-h" texture)
+  {
+    const m = blockcode.match(/^game:log-placed-([^-]+)-(ns|we|ud)$/);
+    if (m) {
+      const suffix = m[2] === 'ns' ? '' : '-h';
+      return tex(`wood/bark/${m[1]}${suffix}.png`);
+    }
+  }
+
+  // game:daub-{color}-{state}  (state = normal/cracked/wattle, each with numbered variants — default to variant 1)
+  {
+    const m = blockcode.match(/^game:daub-([^-]+)-(normal|cracked|wattle)$/);
+    if (m) return tex(`clay/daub/${m[1]}/${m[2]}1.png`);
+  }
+
   // game:planks-veryaged-*  (must be checked before generic planks rule)
   if (/^game:planks-veryaged/.test(blockcode)) {
     return tex('wood/planks/aged/veryaged1.png');
@@ -208,8 +223,12 @@ export function resolveTexture(blockcode: string): string | null {
  * Returns the Three.js texture rotation (in radians) for a given block code.
  * Blocks with a `-ud` (up-down / vertical) orientation need a 90° rotation so
  * the wood grain runs along the log axis.
+ *
+ * game:log-placed-* is excluded: its "-h" texture variant already accounts for
+ * the horizontal orientation, so no additional UV rotation should be applied.
  */
 export function resolveTextureRotation(blockcode: string): number {
+  if (/^game:log-placed-/.test(blockcode)) return 0;
   return (blockcode.endsWith('-ud') || blockcode.endsWith('-we')) ? Math.PI / 2 : 0;
 }
 
