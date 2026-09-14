@@ -17,10 +17,14 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`creative/col${m[1]}.png`);
   }
 
-  // game:rock-cracked-{rock}  (must be checked before generic rock rule)
+  // game:crackedrock-{rock}  (must be checked before generic rock rule)
+  // only granite ships a dedicated cracked texture — other rocks fall back to their plain rock texture
   {
-    const m = blockcode.match(/^game:rock-cracked-(.+)$/);
-    if (m) return tex(`stone/rock-cracked/${m[1]}1.png`);
+    const m = blockcode.match(/^game:crackedrock-(.+)$/);
+    if (m) {
+      const rock = m[1];
+      return rock === 'granite' ? tex(`stone/rock-cracked/${rock}1.png`) : tex(`stone/rock/${rock}1.png`);
+    }
   }
 
   // game:rock-{rock}
@@ -93,6 +97,16 @@ export function resolveTexture(blockcode: string): string | null {
   {
     const m = blockcode.match(/^game:hay-([^-]+)-(?:ns|we|ud)$/);
     if (m) return tex(`hay/${m[1]}-side.png`);
+  }
+
+  // game:linen-{pattern}-{orientation}  (orientation: up/down/north/south/east/west)
+  {
+    const m = blockcode.match(/^game:linen-([^-]+)-(?:up|down|north|south|east|west)$/);
+    if (m) {
+      const numberedPatterns = new Set(['normal', 'diamond', 'offset', 'square']);
+      const file = numberedPatterns.has(m[1]) ? `${m[1]}1` : m[1];
+      return tex(`cloth/linen/${file}.png`);
+    }
   }
 
   // game:debarkedlog-{wood}-{orientation}  (ns = no rotation, we/ud = 90° — handled by resolveTextureRotation)
