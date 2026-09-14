@@ -45,10 +45,15 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`stone/cobblestone/${m[1]}1.png`);
   }
 
-  // game:crackedcobblestone-{rock}
+  // game:crackedcobblestone-{rock}  (only granite ships a dedicated cracked texture — others fall back to plain cobblestone)
   {
     const m = blockcode.match(/^game:crackedcobblestone-(.+)$/);
-    if (m) return tex(`stone/cobblestone-cracked/${m[1]}1.png`);
+    if (m) {
+      const rock = m[1];
+      return rock === 'granite'
+        ? tex(`stone/cobblestone-cracked/${rock}1.png`)
+        : tex(`stone/cobblestone/${rock}1.png`);
+    }
   }
 
   // game:cobblestoneslab-{rock}-*
@@ -152,10 +157,18 @@ export function resolveTexture(blockcode: string): string | null {
     if (m) return tex(`wood/planks/${m[1]}1.png`);
   }
 
-  // game:agedstonebricks-{rock}
+  // game:agedstonebricks-{rock}  (marble rocks use a differently-formatted name in this folder)
   {
     const m = blockcode.match(/^game:agedstonebricks-(.+)$/);
-    if (m) return tex(`stone/agedbrick/${m[1]}1.png`);
+    if (m) {
+      const marbleNames: Record<string, string> = {
+        greenmarble: 'marble-green',
+        redmarble: 'marble-red',
+        whitemarble: 'marble-white',
+      };
+      const rock = marbleNames[m[1]] ?? m[1];
+      return tex(`stone/agedbrick/${rock}1.png`);
+    }
   }
 
   // game:crackedstonebricks-{rock}
@@ -167,7 +180,19 @@ export function resolveTexture(blockcode: string): string | null {
   // game:stonebricks-{rock}
   {
     const m = blockcode.match(/^game:stonebricks-(.+)$/);
-    if (m) return tex(`stone/stonebrick/${m[1]}1.png`);
+    if (m) return tex(`stone/brick/${m[1]}1.png`);
+  }
+
+  // game:sand-{rock}
+  {
+    const m = blockcode.match(/^game:sand-(.+)$/);
+    if (m) return tex(`stone/sand/${m[1]}.png`);
+  }
+
+  // game:rammed-{shade}-{pattern}
+  {
+    const m = blockcode.match(/^game:rammed-([^-]+)-(.+)$/);
+    if (m) return tex(`soil/rammed/${m[1]}/${m[2]}1.png`);
   }
 
   // game:glass-{type}
@@ -191,10 +216,22 @@ export function resolveTexture(blockcode: string): string | null {
     return tex('metal/corroded/rusty1.png');
   }
 
-  // game:metalblock-{age}-riveted-{metal}  (riveted textures have a number suffix)
+  // game:metalblock-{age}-riveted-{metal}  (variant 3 is the only one bundled for most metals)
   {
     const m = blockcode.match(/^game:metalblock-[^-]+-riveted-(.+)$/);
-    if (m) return tex(`metal/riveted/${m[1]}1.png`);
+    if (m) return tex(`metal/riveted/${m[1]}3.png`);
+  }
+
+  // game:metalblock-{age}-plate-{metal}  (numbered variants, default to 1)
+  {
+    const m = blockcode.match(/^game:metalblock-[^-]+-plate-(.+)$/);
+    if (m) return tex(`metal/plate/${m[1]}1.png`);
+  }
+
+  // game:metalblock-{age}-tarnished-{metal}  (variant 3 is the only one bundled for every metal)
+  {
+    const m = blockcode.match(/^game:metalblock-[^-]+-tarnished-(.+)$/);
+    if (m) return tex(`metal/tarnished/${m[1]}3.png`);
   }
 
   // game:metalblock-{age}-{variant}-{metal}  (general fallback — no number suffix)
