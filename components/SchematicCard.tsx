@@ -1,63 +1,72 @@
 import Link from 'next/link';
 import ThumbnailImage from '@/components/ThumbnailImage';
+import { formatDate, formatCompactCount } from '@/lib/format';
 
 interface Props {
   id: string;
   name: string;
   displayName: string | null;
+  description?: string | null;
   authorName?: string | null;
   uploadedAt: number;
   downloadCount?: number;
   likeCount?: number;
 }
 
-function formatDate(ts: number): string {
-  return new Date(ts * 1000).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
 export default function SchematicCard({
   id,
   name,
   displayName,
+  description,
   authorName,
   uploadedAt,
   downloadCount = 0,
   likeCount = 0,
 }: Props) {
+  const title = displayName || name;
   return (
-    <Link href={`/view/${id}`} className="block group h-full">
-      <div className="bg-slate-800 border border-slate-700 rounded-xl hover:border-amber-500/60 transition-colors duration-200 h-full flex flex-col overflow-hidden">
+    <Link href={`/view/${id}`} className="group block h-full">
+      <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500/50 hover:shadow-lg hover:shadow-black/30">
         {/* Thumbnail preview */}
-        <div className="bg-slate-900 h-32 flex items-center justify-center">
-          <ThumbnailImage id={id} alt={displayName || name} />
-        </div>
-
-        <div className="p-4 flex flex-col gap-3 flex-1">
-        {/* Title */}
-        <div>
-          <h3 className="text-amber-400 font-semibold text-base truncate group-hover:text-amber-300 transition-colors">
-            {displayName || name}
-          </h3>
-          {displayName && (
-            <p className="text-slate-500 text-xs mt-0.5 truncate">{name}</p>
-          )}
-          {authorName && (
-            <p className="text-slate-500 text-xs mt-0.5 truncate">by {authorName}</p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-auto flex items-center justify-between text-slate-500 text-xs">
-          <div className="flex items-center gap-3">
-            <span title="Likes">♥ {likeCount}</span>
-            <span title="Downloads">⬇ {downloadCount}</span>
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
+          <div className="absolute inset-0 flex items-center justify-center p-2 transition-transform duration-300 group-hover:scale-[1.04]">
+            <ThumbnailImage id={id} alt={title} />
           </div>
-          <span>{formatDate(uploadedAt)}</span>
         </div>
+
+        <div className="flex flex-1 flex-col gap-2 p-4">
+          {/* Title */}
+          <div>
+            <h3 className="truncate text-base font-semibold text-amber-400 transition-colors group-hover:text-amber-300">
+              {title}
+            </h3>
+            {displayName && displayName !== name && (
+              <p className="mt-0.5 truncate font-mono text-xs text-slate-600">{name}</p>
+            )}
+          </div>
+
+          {description && (
+            <p className="line-clamp-2 text-sm text-slate-400">{description}</p>
+          )}
+
+          {authorName && (
+            <p className="truncate text-xs text-slate-500">
+              by <span className="text-slate-400">{authorName}</span>
+            </p>
+          )}
+
+          {/* Footer */}
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-800 pt-3 text-xs text-slate-500">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1" title={`${likeCount} likes`}>
+                <span className="text-amber-500/80">♥</span> {formatCompactCount(likeCount)}
+              </span>
+              <span className="flex items-center gap-1" title={`${downloadCount} downloads`}>
+                <span className="text-slate-500">⬇</span> {formatCompactCount(downloadCount)}
+              </span>
+            </div>
+            <span className="whitespace-nowrap">{formatDate(uploadedAt)}</span>
+          </div>
         </div>
       </div>
     </Link>

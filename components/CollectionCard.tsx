@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import ThumbnailImage from './ThumbnailImage';
+import { formatDate, formatCompactCount } from '@/lib/format';
 
 interface Props {
   id: string;
@@ -13,14 +14,6 @@ interface Props {
   firstSchematicId: string | null;
   likeCount?: number;
   thumbnailImageId?: string | null;
-}
-
-function formatDate(ts: number): string {
-  return new Date(ts * 1000).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 export default function CollectionCard({
@@ -35,46 +28,55 @@ export default function CollectionCard({
   thumbnailImageId,
 }: Props) {
   return (
-    <Link href={`/view/collection/${id}`} className="block group h-full">
-      <div className="bg-slate-800 border border-slate-700 rounded-xl hover:border-amber-500/60 transition-colors duration-200 h-full flex flex-col overflow-hidden">
+    <Link href={`/view/collection/${id}`} className="group block h-full">
+      <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500/50 hover:shadow-lg hover:shadow-black/30">
         {/* Thumbnail */}
-        <div className="bg-slate-900 h-32 flex items-center justify-center relative">
-          {thumbnailImageId ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={`/api/collections/${id}/images/${thumbnailImageId}`}
-              alt={name}
-              className="w-full h-full object-cover"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-            />
-          ) : firstSchematicId ? (
-            <ThumbnailImage id={firstSchematicId} alt={name} />
-          ) : (
-            <span className="text-slate-600 text-4xl">📦</span>
-          )}
-          <span className="absolute top-2 right-2 bg-amber-700 text-amber-100 text-xs font-bold px-2 py-0.5 rounded-full">
-            {memberCount} {memberCount === 1 ? 'part' : 'parts'}
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
+          <div className="absolute inset-0 flex items-center justify-center p-2 transition-transform duration-300 group-hover:scale-[1.04]">
+            {thumbnailImageId ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/api/collections/${id}/images/${thumbnailImageId}`}
+                alt={name}
+                loading="lazy"
+                className="h-full w-full object-cover"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+            ) : firstSchematicId ? (
+              <ThumbnailImage id={firstSchematicId} alt={name} />
+            ) : (
+              <span className="text-4xl text-slate-700">📦</span>
+            )}
+          </div>
+          <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full border border-amber-700/50 bg-slate-950/80 px-2 py-0.5 text-xs font-semibold text-amber-300 backdrop-blur-sm">
+            📦 {memberCount} {memberCount === 1 ? 'part' : 'parts'}
           </span>
         </div>
 
-        <div className="p-4 flex flex-col gap-2 flex-1">
+        <div className="flex flex-1 flex-col gap-2 p-4">
           <div>
-            <h3 className="text-amber-400 font-semibold text-base truncate group-hover:text-amber-300 transition-colors">
-              {name}
-            </h3>
-            <span className="text-xs text-slate-500">Collection</span>
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-base font-semibold text-amber-400 transition-colors group-hover:text-amber-300">
+                {name}
+              </h3>
+            </div>
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-600">Collection</span>
           </div>
 
           {description && (
-            <p className="text-slate-400 text-xs line-clamp-2">{description}</p>
+            <p className="line-clamp-2 text-sm text-slate-400">{description}</p>
           )}
           {authorName && (
-            <p className="text-slate-500 text-xs truncate">by {authorName}</p>
+            <p className="truncate text-xs text-slate-500">
+              by <span className="text-slate-400">{authorName}</span>
+            </p>
           )}
 
-          <div className="mt-auto flex items-center justify-between text-slate-500 text-xs">
-            <span title="Likes">♥ {likeCount}</span>
-            <span>{formatDate(createdAt)}</span>
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-800 pt-3 text-xs text-slate-500">
+            <span className="flex items-center gap-1" title={`${likeCount} likes`}>
+              <span className="text-amber-500/80">♥</span> {formatCompactCount(likeCount)}
+            </span>
+            <span className="whitespace-nowrap">{formatDate(createdAt)}</span>
           </div>
         </div>
       </div>

@@ -489,16 +489,17 @@ export default function EditCollectionClient({
         {schematics.length === 0 ? (
           <p className="text-slate-500 text-center py-16">No schematics in this collection.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {schematics.map((s, i) => (
               <div key={s.id} className="relative">
-                <span className="absolute top-2 left-2 z-10 bg-slate-900/80 text-slate-400 text-xs font-mono px-2 py-0.5 rounded-full border border-slate-700">
+                <span className="absolute top-2 left-2 z-10 rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 font-mono text-xs text-slate-400 backdrop-blur-sm">
                   Part {i + 1}
                 </span>
                 <SchematicCard
                   id={s.id}
                   name={s.name}
                   displayName={s.display_name}
+                  description={s.description}
                   uploadedAt={s.uploaded_at}
                   downloadCount={s.download_count}
                   likeCount={s.like_count}

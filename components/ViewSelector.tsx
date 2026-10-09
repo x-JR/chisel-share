@@ -33,15 +33,15 @@ export default function ViewSelector({ currentView }: Props) {
   return (
     <div className="flex items-center gap-2 text-sm text-slate-400">
       <span>Show</span>
-      <div className="flex rounded-lg overflow-hidden border border-slate-700">
+      <div className="flex overflow-hidden rounded-lg border border-slate-700 bg-slate-800 p-0.5">
         {OPTIONS.map((opt) => (
           <button
             key={opt.value}
             onClick={() => handleClick(opt.value)}
-            className={`px-3 py-1.5 text-sm transition-colors ${
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               currentView === opt.value
                 ? 'bg-amber-600 text-white'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : 'text-slate-300 hover:bg-slate-700'
             }`}
           >
             {opt.label}
